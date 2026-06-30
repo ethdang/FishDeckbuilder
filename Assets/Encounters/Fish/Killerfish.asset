@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a521e9fcaa4034ffe911b11c77402004, type: 3}
   m_Name: Killerfish
   m_EditorClassIdentifier: Assembly-CSharp::EncounterCardData
-  cardType: 0
-  fishData: {fileID: 0}
+  category: 1
+  fishData: {fileID: 11400000, guid: f748dcece68084c80bd951c128efff62, type: 2}

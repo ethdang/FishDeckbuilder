@@ -6,24 +6,26 @@ public class EncounterDeck : MonoBehaviour
     public List<EncounterCardData> drawPile = new List<EncounterCardData>();
     public List<EncounterCardData> discardPile = new List<EncounterCardData>();
 
-    void Start()
+    private EncounterRevealArea revealArea;
+
+    void Awake()
     {
-        DrawCard();
-        DrawCard();
-        DrawCard();
-        ShuffleDeck();
-        DrawCard();
-        DrawCard();
+        revealArea = FindAnyObjectByType<EncounterRevealArea>();
     }
 
     public EncounterCardData DrawCard()
     {
+        if (drawPile.Count == 0)
+        {
+            Debug.LogError("Empty Deck");
+            return null;
+        }
+
         EncounterCardData drawnCard = drawPile[0];
 
         drawPile.Remove(drawnCard);
         discardPile.Add(drawnCard);
 
-        Debug.Log(drawnCard);
         return drawnCard;
     }
 

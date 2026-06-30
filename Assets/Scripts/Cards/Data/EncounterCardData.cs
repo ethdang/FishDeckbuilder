@@ -3,13 +3,13 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "EncounterCardData", menuName = "Cards/Encounter Card Data")]
 public class EncounterCardData : ScriptableObject
 {
-    public EncounterCardType cardType; // UNTIL WHAT TYPE // ex. draw until water
+    public EncounterCardCategory category; // UNTIL WHAT TYPE // ex. draw until water
     public FishData fishData;
+    public bool IsFish => category == EncounterCardCategory.Fish;
 }
 
-
-public enum EncounterCardType
+public enum EncounterCardCategory
 {
-    Fish,
-    Water
+    Water,
+    Fish
 }

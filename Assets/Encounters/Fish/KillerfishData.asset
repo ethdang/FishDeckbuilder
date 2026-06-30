@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 226385b0d5ddb4bce8f14e781efbaa5c, type: 3}
   m_Name: KillerfishData
   m_EditorClassIdentifier: Assembly-CSharp::FishData
-  fishName: 
+  fishName: Killerfish

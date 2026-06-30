@@ -6,8 +6,8 @@ public class CardData : ScriptableObject
     public string cardName;
     public string description;
     public CardAbility abilityType; // WHAT // draw until
-    public int objectiveAmt;  // HOW MUCH // ex. draw 5 cards
-    public EncounterCardType encounterObjectiveType; // UNTIL WHAT TYPE // ex. draw until water
+    public int amount;  // HOW MUCH // ex. draw 5 cards
+    public EncounterCardCategory targetType;
     public DeckType targetDeck; // WHERE // ex. draw in the encounter deck   
 }
 
