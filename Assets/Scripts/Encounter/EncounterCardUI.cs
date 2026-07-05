@@ -12,6 +12,7 @@ public class EncounterCardUI : MonoBehaviour
 
     [Header("Slide")]
     [SerializeField] private float slideDuration = 0.35f;
+    [SerializeField] private float moveSpeed = 12f;
 
     [Header("Flip")]
     [SerializeField] private float flipDuration = 0.18f;
@@ -46,6 +47,16 @@ public class EncounterCardUI : MonoBehaviour
 
         front.SetActive(false);
         back.SetActive(true);
+    }
+
+    void Update()
+    {
+        float t = 1f - Mathf.Exp(-moveSpeed * Time.deltaTime);
+
+        rect.anchoredPosition = Vector2.Lerp(
+            rect.anchoredPosition,
+            TargetPosition,
+            t);
     }
 
     public void StartReveal()

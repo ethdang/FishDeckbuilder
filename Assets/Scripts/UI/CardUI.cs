@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
+using System;
 
 public class CardUI : MonoBehaviour,
     IPointerEnterHandler,
@@ -23,35 +24,33 @@ public class CardUI : MonoBehaviour,
     [SerializeField] private float dragScaleBoost = 0.14f;
     [SerializeField] private float dragStraightenAmount = 0.75f;
 
-    [Header("Play Animation")]
-    [SerializeField] private float playMoveDuration = 0.15f;
-    [SerializeField] private float playHoldDuration = 0.35f;
-    [SerializeField] private float playFadeDuration = 0.20f;
-    [SerializeField] private float playScale = 1.35f;
     [SerializeField] private RectTransform playAnimationTarget;
 
     public float HoverProgress { get; private set; }
     public bool IsHovered { get; private set; }
     public bool IsDragging { get; private set; }
-    public bool IsPlayingCard => isPlayingCard;
 
     public Vector2 TargetPosition;
     public Quaternion TargetRotation;
     public Vector3 TargetScale = Vector3.one;
 
+    private RectTransform rectTransform;
+
     private CardData cardData;
+    public CardData Card => cardData;
+    private CardActionAnimation cardActionAnimation;
     private PlayerHand playerHand;
     private PlayerHandUI handUI;
     private PlayZone playZone;
+    private PlayerResource playerResource;
+    private CardManager cardManager;
 
-    private RectTransform rectTransform;
     private RectTransform handParentRect;
-    private CanvasGroup canvasGroup;
 
     private Vector2 dragOffset;
     private Vector2 dragTargetLocalPosition;
 
-    private bool isPlayingCard;
+    public bool isAnimating;
 
     public void Initialize(CardData card, PlayerHand hand)
     {
@@ -67,14 +66,13 @@ public class CardUI : MonoBehaviour,
 
     void Awake()
     {
+        cardActionAnimation = GetComponent<CardActionAnimation>();
         rectTransform = GetComponent<RectTransform>();
-
-        canvasGroup = GetComponent<CanvasGroup>();
-        if (canvasGroup == null)
-            canvasGroup = gameObject.AddComponent<CanvasGroup>();
 
         handUI = FindFirstObjectByType<PlayerHandUI>();
         playZone = FindFirstObjectByType<PlayZone>();
+        playerResource = FindFirstObjectByType<PlayerResource>();
+        cardManager = FindFirstObjectByType<CardManager>();
 
         if (transform.parent != null)
             handParentRect = transform.parent as RectTransform;
@@ -85,7 +83,7 @@ public class CardUI : MonoBehaviour,
 
     void Update()
     {
-        float targetHover = (IsHovered && !IsDragging && !isPlayingCard) ? 1f : 0f;
+        float targetHover = (IsHovered && !IsDragging && !isAnimating) ? 1f : 0f;
 
         HoverProgress = Mathf.MoveTowards(
             HoverProgress,
@@ -96,7 +94,7 @@ public class CardUI : MonoBehaviour,
 
     void LateUpdate()
     {
-        if (isPlayingCard)
+        if (isAnimating)
             return;
 
         float t = 1f - Mathf.Exp(-animationSpeed * Time.deltaTime);
@@ -142,7 +140,7 @@ public class CardUI : MonoBehaviour,
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (IsDragging || isPlayingCard)
+        if (IsDragging || isAnimating)
             return;
 
         IsHovered = true;
@@ -208,23 +206,32 @@ public class CardUI : MonoBehaviour,
         if (!IsDragging)
             return;
 
-        if (IsOverPlayZone(eventData))
+        if (IsOverPlayZone(eventData) && cardManager.CanExecute(cardData))
         {
-            isPlayingCard = true;
+            isAnimating = true;
             IsDragging = false;
             IsHovered = false;
 
-            if (handUI != null)
-                handUI.RemoveCardObject(gameObject);
-
-            StartCoroutine(PlayCardAnimation());
+            StartCoroutine(cardActionAnimation.AnimateTo(
+                handParentRect,
+                playAnimationTarget,
+                OnCardPlayed));
             return;
+        }
+        else
+        {
+            Debug.Log("cannot afford");
         }
 
         IsDragging = false;
 
         if (handUI != null)
             handUI.LayoutCards();
+    }
+
+    private void OnCardPlayed()
+    {
+        playerHand.PlayCardFromHand(cardData);
     }
 
     private bool IsOverPlayZone(PointerEventData eventData)
@@ -239,90 +246,5 @@ public class CardUI : MonoBehaviour,
             eventData.position,
             eventData.pressEventCamera
         );
-    }
-
-    private IEnumerator PlayCardAnimation()
-    {
-        transform.SetAsLastSibling();
-        canvasGroup.blocksRaycasts = false;
-        canvasGroup.interactable = false;
-        canvasGroup.alpha = 1f;
-
-        Vector2 startPosition = rectTransform.anchoredPosition;
-
-        Canvas canvas = GetComponentInParent<Canvas>();
-        Camera cam = canvas != null ? canvas.worldCamera : null;
-
-        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(
-            cam,
-            playAnimationTarget.position
-        );
-
-        Vector2 centerPosition;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            handParentRect,
-            screenPoint,
-            cam,
-            out centerPosition
-        );
-
-        Vector3 startScale = rectTransform.localScale;
-        Vector3 enlargedScale = Vector3.one * playScale;
-
-        float timer = 0f;
-
-        while (timer < playMoveDuration)
-        {
-            timer += Time.deltaTime;
-
-            float t = Mathf.SmoothStep(0f, 1f, timer / playMoveDuration);
-
-            rectTransform.anchoredPosition = Vector2.Lerp(
-                startPosition,
-                centerPosition,
-                t
-            );
-
-            rectTransform.localScale = Vector3.Lerp(
-                startScale,
-                enlargedScale,
-                t
-            );
-
-            rectTransform.localRotation = Quaternion.identity;
-
-            yield return null;
-        }
-
-        rectTransform.anchoredPosition = centerPosition;
-        rectTransform.localScale = enlargedScale;
-        rectTransform.localRotation = Quaternion.identity;
-
-        yield return new WaitForSeconds(playHoldDuration);
-
-        if (playerHand != null)
-            playerHand.PlayCardFromHand(cardData);
-
-        timer = 0f;
-        Vector3 endScale = enlargedScale * 0.5f;
-
-        while (timer < playFadeDuration)
-        {
-            timer += Time.deltaTime;
-
-            float t = Mathf.SmoothStep(0f, 1f, timer / playFadeDuration);
-
-            rectTransform.localScale = Vector3.Lerp(
-                enlargedScale,
-                endScale,
-                t
-            );
-
-            canvasGroup.alpha = Mathf.Lerp(1f, 0f, t);
-
-            yield return null;
-        }
-
-        Destroy(gameObject);
     }
 }

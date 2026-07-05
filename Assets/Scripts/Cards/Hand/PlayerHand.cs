@@ -7,7 +7,7 @@ public class PlayerHand : MonoBehaviour
 
     public CardData selectedCard;
 
-    public int handLimit = 10;
+    public int handLimit = 5;
 
     private CardManager cardManager;
     private PlayerDeck playerDeck;
@@ -41,16 +41,18 @@ public class PlayerHand : MonoBehaviour
 
     public void PlayCardFromHand(CardData card)
     {
-        if (card == null || !currentCards.Contains(card))
+        if (!currentCards.Contains(card))
             return;
+
+        Debug.Log($"Played {card.cardName}");
+        Debug.Log($"Cards remaining: {currentCards.Count}");
 
         currentCards.Remove(card);
 
         playerDeck.AddToDiscard(card);
-
         cardManager.PlayCard(card);
 
-        handUI.UpdateHand();
+        handUI.RemoveCard(card); // ONLY visual removal here
     }
 
     public void Add(CardData newCard)
@@ -60,14 +62,38 @@ public class PlayerHand : MonoBehaviour
 
         currentCards.Add(newCard);
 
-        handUI.UpdateHand();
+        handUI.AddCard(newCard);
     }
 
     public void Remove(CardData card)
     {
         currentCards.Remove(card);
+    }
 
-        handUI.UpdateHand();
+    public void DiscardHand()
+    {
+        handUI.DiscardCardsAnimated();
+    }
+
+    public List<CardData> DiscardAllInstant()
+    {
+        List<CardData> removed = new List<CardData>(currentCards);
+        currentCards.Clear();
+        return removed;
+    }
+
+    public void DrawToHandLimit()
+    {
+        int safety = 20;
+
+        while (!IsHandFull() && safety-- > 0)
+        {
+            Debug.Log($"Drawing... Hand = {currentCards.Count}");
+
+            DrawCard();
+        }
+
+        Debug.Log($"Finished drawing. Hand = {currentCards.Count}");
     }
 
     public bool IsHandFull()

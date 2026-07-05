@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 
 public class PlayerHandUI : MonoBehaviour
@@ -7,6 +8,8 @@ public class PlayerHandUI : MonoBehaviour
 
     [SerializeField] private RectTransform objectParent;
     [SerializeField] private GameObject cardPrefab;
+    [SerializeField] private RectTransform discardPile;
+    [SerializeField] private RectTransform spawnPosition;
 
     [Header("Fan Spread")]
     [SerializeField] private float minTotalFanAngle = 20f;
@@ -26,44 +29,72 @@ public class PlayerHandUI : MonoBehaviour
     [SerializeField] private float layoutSmoothSpeed = 14f;
 
     private PlayerHand playerHand;
+    private PlayerDeck playerDeck;
 
+    private bool isDiscarding;
     private float currentTotalFanAngle;
     private float currentRadius;
 
     void Awake()
     {
         playerHand = FindFirstObjectByType<PlayerHand>();
+        playerDeck = FindFirstObjectByType<PlayerDeck>();
     }
 
-    [ContextMenu("Refresh Hand")]
-    public void Hand()
+    // public void UpdateHand()
+    // {
+    //     foreach (GameObject gameObject in activeObjects)
+    //     {
+    //         if (gameObject != null)
+    //             Destroy(gameObject);
+    //     }
+
+    //     activeObjects.Clear();
+
+    //     foreach (CardData cardData in playerHand.currentCards)
+    //     {
+    //         GameObject newCard = Instantiate(cardPrefab, objectParent);
+    //         activeObjects.Add(newCard);
+
+    //         CardUI cardUI = newCard.GetComponent<CardUI>();
+    //         cardUI.Initialize(cardData, playerHand);
+
+    //         RectTransform rect = newCard.GetComponent<RectTransform>();
+    //         rect.anchoredPosition = new Vector2(0f, -100f);
+    //     }
+
+    //     LayoutCards(true);
+    // }
+
+    public void AddCard(CardData card)
     {
-        UpdateHand();
+        GameObject obj = Instantiate(cardPrefab, objectParent);
+
+        RectTransform rect = obj.GetComponent<RectTransform>();
+        rect.anchoredPosition = spawnPosition.anchoredPosition;
+
+        CardUI ui = obj.GetComponent<CardUI>();
+        ui.Initialize(card, playerHand);
+
+        activeObjects.Add(obj);
+
+        LayoutCards(false);
     }
 
-    public void UpdateHand()
+    public void RemoveCard(CardData card)
     {
-        foreach (GameObject gameObject in activeObjects)
+        for (int i = 0; i < activeObjects.Count; i++)
         {
-            if (gameObject != null)
-                Destroy(gameObject);
+            CardUI ui = activeObjects[i].GetComponent<CardUI>();
+
+            if (ui.Card == card)
+            {
+                Destroy(activeObjects[i]);
+                activeObjects.RemoveAt(i);
+                LayoutCards();
+                return;
+            }
         }
-
-        activeObjects.Clear();
-
-        foreach (CardData cardData in playerHand.currentCards)
-        {
-            GameObject newCard = Instantiate(cardPrefab, objectParent);
-            activeObjects.Add(newCard);
-
-            CardUI cardUI = newCard.GetComponent<CardUI>();
-            cardUI.Initialize(cardData, playerHand);
-
-            RectTransform rect = newCard.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(0f, -100f);
-        }
-
-        LayoutCards(true);
     }
 
     public void RemoveCardObject(GameObject cardObject)
@@ -77,11 +108,44 @@ public class PlayerHandUI : MonoBehaviour
 
     void LateUpdate()
     {
+        if (isDiscarding)
+            return;
+
         LayoutCards(false);
+    }
+
+    public IEnumerator DiscardCardsAnimated()
+    {
+        isDiscarding = true;
+
+        while (activeObjects.Count > 0)
+        {
+            GameObject obj = activeObjects[0];
+            activeObjects.RemoveAt(0);
+
+            CardUI ui = obj.GetComponent<CardUI>();
+            
+
+            ui.isAnimating = true;
+
+            yield return obj.GetComponent<CardActionAnimation>().AnimateTo(
+                objectParent,
+                discardPile,
+                null
+            );
+
+            Destroy(obj);
+
+            yield return new WaitForSeconds(0.05f);
+        }
+
+        isDiscarding = false;
     }
 
     public void LayoutCards(bool snap = false)
     {
+        if (isDiscarding) return;
+
         int count = activeObjects.Count;
 
         if (count == 0)
@@ -97,11 +161,14 @@ public class PlayerHandUI : MonoBehaviour
                 continue;
 
             CardUI ui = cardObject.GetComponent<CardUI>();
+            playerHand.Remove(ui.Card);
+
             if (ui == null)
                 continue;
 
-            if (ui.IsDragging || ui.IsPlayingCard)
+            if (ui.IsDragging || ui.isAnimating)
                 continue;
+        
 
             if (ui.HoverProgress > hoveredProgress)
             {
@@ -146,7 +213,7 @@ public class PlayerHandUI : MonoBehaviour
             RectTransform rect = cardObject.GetComponent<RectTransform>();
             CardUI ui = cardObject.GetComponent<CardUI>();
 
-            if (ui != null && (ui.IsDragging || ui.IsPlayingCard))
+            if (ui != null && (ui.IsDragging || ui.isAnimating))
                 continue;
 
             float t = (count == 1) ? 0.5f : i / (float)(count - 1);

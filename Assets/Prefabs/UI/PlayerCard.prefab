@@ -285,6 +285,7 @@ GameObject:
   - component: {fileID: 9191673040607741663}
   - component: {fileID: 6058052521773054407}
   - component: {fileID: 7707266339090859289}
+  - component: {fileID: 5526362557137426913}
   - component: {fileID: 5346315049611418294}
   - component: {fileID: 7706785381226655474}
   - component: {fileID: 7428031764353362349}
@@ -342,14 +343,26 @@ MonoBehaviour:
   animationSpeed: 15
   dragScaleBoost: 0.14
   dragStraightenAmount: 1
-  playMoveDuration: 0.1
-  playHoldDuration: 0.35
-  playFadeDuration: 0.1
-  playScale: 1.35
   playAnimationTarget: {fileID: 0}
   TargetPosition: {x: 0, y: 0}
   TargetRotation: {x: 0, y: 0, z: 0, w: 0}
   TargetScale: {x: 1, y: 1, z: 1}
+--- !u!114 &5526362557137426913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6939789862291241986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1b5e0dd0f6f84253a8bac8b5a2c567f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CardActionAnimation
+  moveDuration: 0.15
+  holdDuration: 0.35
+  fadeDuration: 0.2
+  enlargedScale: 1.35
 --- !u!114 &5346315049611418294
 MonoBehaviour:
   m_ObjectHideFlags: 0
