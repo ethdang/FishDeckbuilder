@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
+using System.Runtime.InteropServices;
 
 public class TurnManager : MonoBehaviour
 {
@@ -28,12 +29,17 @@ public class TurnManager : MonoBehaviour
 
     private IEnumerator EndTurnRoutine()
     {
-        Debug.Log($"Before discard: {playerHand.currentCards.Count}");
-        yield return handUI.DiscardCardsAnimated();
-        Debug.Log($"After discard: {playerHand.currentCards.Count}");
+        StartCoroutine(handUI.DiscardCardsAnimated());
+
+        int safety = 0;
+
+        while (handUI.isDiscarding && safety <= 20)
+        {
+            safety++;
+            yield return null;   
+        }
 
         playerHand.DrawToHandLimit();
-        Debug.Log($"After draw: {playerHand.currentCards.Count}");
 
         turn++;
 

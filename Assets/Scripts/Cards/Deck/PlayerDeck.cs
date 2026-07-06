@@ -18,8 +18,6 @@ public class PlayerDeck : MonoBehaviour
 
         drawPile.RemoveAt(0);
 
-        Debug.Log($"Drew {drawnCard.cardName}");
-
         return drawnCard;
     }
 

@@ -31,7 +31,7 @@ public class PlayerHandUI : MonoBehaviour
     private PlayerHand playerHand;
     private PlayerDeck playerDeck;
 
-    private bool isDiscarding;
+    public bool isDiscarding;
     private float currentTotalFanAngle;
     private float currentRadius;
 
@@ -118,6 +118,8 @@ public class PlayerHandUI : MonoBehaviour
     {
         isDiscarding = true;
 
+        Debug.Log("is discardinh");
+
         while (activeObjects.Count > 0)
         {
             GameObject obj = activeObjects[0];
@@ -125,7 +127,6 @@ public class PlayerHandUI : MonoBehaviour
 
             CardUI ui = obj.GetComponent<CardUI>();
             
-
             ui.isAnimating = true;
 
             yield return obj.GetComponent<CardActionAnimation>().AnimateTo(
@@ -161,7 +162,6 @@ public class PlayerHandUI : MonoBehaviour
                 continue;
 
             CardUI ui = cardObject.GetComponent<CardUI>();
-            playerHand.Remove(ui.Card);
 
             if (ui == null)
                 continue;

@@ -15,6 +15,8 @@ public class PlayerHand : MonoBehaviour
 
     void Awake()
     {
+        Debug.Log($"PlayerHand Awake: {GetInstanceID()}");
+        
         cardManager = FindFirstObjectByType<CardManager>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
         handUI = FindAnyObjectByType<PlayerHandUI>();
@@ -45,12 +47,13 @@ public class PlayerHand : MonoBehaviour
             return;
 
         Debug.Log($"Played {card.cardName}");
-        Debug.Log($"Cards remaining: {currentCards.Count}");
 
         currentCards.Remove(card);
 
         playerDeck.AddToDiscard(card);
         cardManager.PlayCard(card);
+
+        Debug.Log($"Cards remaining: {currentCards.Count}");
 
         handUI.RemoveCard(card); // ONLY visual removal here
     }
@@ -72,6 +75,7 @@ public class PlayerHand : MonoBehaviour
 
     public void DiscardHand()
     {
+        List<CardData> removed = DiscardAllInstant();
         handUI.DiscardCardsAnimated();
     }
 
@@ -88,12 +92,14 @@ public class PlayerHand : MonoBehaviour
 
         while (!IsHandFull() && safety-- > 0)
         {
-            Debug.Log($"Drawing... Hand = {currentCards.Count}");
+            Debug.Log($"TOP: {currentCards.Count}");
 
             DrawCard();
+
+            Debug.Log($"BOTTOM: {currentCards.Count}");
         }
 
-        Debug.Log($"Finished drawing. Hand = {currentCards.Count}");
+        Debug.Log($"END: {currentCards.Count}");
     }
 
     public bool IsHandFull()
