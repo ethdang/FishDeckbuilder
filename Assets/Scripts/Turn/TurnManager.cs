@@ -1,17 +1,18 @@
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine;
-using System.Runtime.InteropServices;
 
 public class TurnManager : MonoBehaviour
 {
     public int turn { get; private set; } = 1;
 
-    public List<PendingCard> pendingCards = new();
+    public List<PendingEffect> pendingEffects = new();
+
     private PlayerHand playerHand;
     private PlayerHandUI handUI;
     private PlayerDeck playerDeck;
     private CardManager cardManager;
+    private ContextManager contextManager;
 
     void Awake()
     {
@@ -19,6 +20,7 @@ public class TurnManager : MonoBehaviour
         handUI = FindFirstObjectByType<PlayerHandUI>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
         cardManager = FindFirstObjectByType<CardManager>();
+        contextManager = FindFirstObjectByType<ContextManager>();
     }
 
     public void EndTurn()
@@ -39,22 +41,19 @@ public class TurnManager : MonoBehaviour
             yield return null;   
         }
 
-        playerHand.DrawToHandLimit();
+        playerHand.DrawToStartingHandSize();
 
         turn++;
 
-        for (int i = pendingCards.Count - 1; i >= 0; i--)
+        for (int i = pendingEffects.Count - 1; i >= 0; i--)
         {
-            pendingCards[i].turnsRemaining--;
+            pendingEffects[i].turnsRemaining--;
 
-            if (pendingCards[i].turnsRemaining <= 0)
+            if (pendingEffects[i].turnsRemaining <= 0)
             {
-                cardManager.ExecuteCard(pendingCards[i].card); 
-                
-                // play an animation of the card showing up on screen 
-                // to add some sort of visualization later on
+                pendingEffects[i].effect.Execute(contextManager.GetContext());
 
-                pendingCards.RemoveAt(i);
+                pendingEffects.RemoveAt(i);
             }
         }
     }
@@ -66,8 +65,8 @@ public class TurnManager : MonoBehaviour
 }
 
 [System.Serializable]
-public class PendingCard
+public class PendingEffect
 {
-    public CardData card;
+    public CardEffect effect;
     public int turnsRemaining;
 }

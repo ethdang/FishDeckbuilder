@@ -69,6 +69,9 @@ public class CardUI : MonoBehaviour,
         cardActionAnimation = GetComponent<CardActionAnimation>();
         rectTransform = GetComponent<RectTransform>();
 
+        if (cardActionAnimation == null)
+            Debug.LogWarning("CardUI: CardActionAnimation component is missing on prefab.", this);
+
         handUI = FindFirstObjectByType<PlayerHandUI>();
         playZone = FindFirstObjectByType<PlayZone>();
         playerResource = FindFirstObjectByType<PlayerResource>();
@@ -206,8 +209,18 @@ public class CardUI : MonoBehaviour,
         if (!IsDragging)
             return;
 
-        if (IsOverPlayZone(eventData) && cardManager.CanExecute(cardData))
+        bool overPlayZone = IsOverPlayZone(eventData);
+        bool canExecute = (cardManager != null && cardManager.CanExecute(cardData));
+
+        if (overPlayZone && canExecute)
         {
+            if (cardActionAnimation == null)
+            {
+                Debug.LogError("CardUI.OnEndDrag: CardActionAnimation component missing.", this);
+                IsDragging = false;
+                return;
+            }
+
             isAnimating = true;
             IsDragging = false;
             IsHovered = false;
@@ -220,7 +233,7 @@ public class CardUI : MonoBehaviour,
         }
         else
         {
-            Debug.Log("cannot afford");
+            Debug.Log("CardUI.OnEndDrag: cannot play card (not over play zone or cannot afford).");
         }
 
         IsDragging = false;
@@ -231,7 +244,10 @@ public class CardUI : MonoBehaviour,
 
     private void OnCardPlayed()
     {
-        playerHand.PlayCardFromHand(cardData);
+        if (playerHand != null)
+            playerHand.PlayCardFromHand(cardData);
+        else
+            Debug.LogError("CardUI.OnCardPlayed: playerHand is null. Can't play card.");
     }
 
     private bool IsOverPlayZone(PointerEventData eventData)

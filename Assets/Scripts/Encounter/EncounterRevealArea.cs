@@ -10,8 +10,6 @@ public class EncounterRevealArea : MonoBehaviour
     [SerializeField] private ScrollRect scrollRect;
 
     [Header("Layout")]
-    [SerializeField] private float verticalSpacing = 65f;
-    [SerializeField] private float verticalPosition = 0.2f;
     [SerializeField] private float verticalPadding = 200f;
 
     [Header("Spawn")]

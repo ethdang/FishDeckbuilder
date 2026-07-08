@@ -7,16 +7,15 @@ public class PlayerHand : MonoBehaviour
 
     public CardData selectedCard;
 
-    public int handLimit = 5;
+    public int startingHandSize = 5;
+    public int handLimit = int.MaxValue;
 
     private CardManager cardManager;
     private PlayerDeck playerDeck;
     private PlayerHandUI handUI;
 
     void Awake()
-    {
-        Debug.Log($"PlayerHand Awake: {GetInstanceID()}");
-        
+    {   
         cardManager = FindFirstObjectByType<CardManager>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
         handUI = FindAnyObjectByType<PlayerHandUI>();
@@ -76,7 +75,36 @@ public class PlayerHand : MonoBehaviour
     public void DiscardHand()
     {
         List<CardData> removed = DiscardAllInstant();
-        handUI.DiscardCardsAnimated();
+
+        // Ensure we have a playerDeck reference
+        if (playerDeck == null)
+            playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+        // Move them to the logical discard pile so game state is correct immediately
+        if (playerDeck != null)
+        {
+            foreach (var c in removed)
+                playerDeck.AddToDiscard(c);
+        }
+        else
+        {
+            Debug.LogWarning("PlayerHand.DiscardHand: playerDeck is null; logical discard not updated.");
+        }
+
+        // Ensure we have a handUI reference
+        if (handUI == null)
+            handUI = FindFirstObjectByType<PlayerHandUI>();
+
+        // Start the existing UI coroutine to animate cards moving to the discard pile.
+        // IMPORTANT: start it as a coroutine so the UI animation actually runs.
+        if (handUI != null)
+        {
+            StartCoroutine(handUI.DiscardCardsAnimated());
+        }
+        else
+        {
+            Debug.LogWarning("PlayerHand.DiscardHand: handUI is null; visual discard will not animate.");
+        }
     }
 
     public List<CardData> DiscardAllInstant()
@@ -86,20 +114,14 @@ public class PlayerHand : MonoBehaviour
         return removed;
     }
 
-    public void DrawToHandLimit()
+    public void DrawToStartingHandSize()
     {
         int safety = 20;
 
-        while (!IsHandFull() && safety-- > 0)
+        while (currentCards.Count < startingHandSize && safety-- > 0)
         {
-            Debug.Log($"TOP: {currentCards.Count}");
-
             DrawCard();
-
-            Debug.Log($"BOTTOM: {currentCards.Count}");
         }
-
-        Debug.Log($"END: {currentCards.Count}");
     }
 
     public bool IsHandFull()

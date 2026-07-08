@@ -39,6 +39,15 @@ public class PlayerHandUI : MonoBehaviour
     {
         playerHand = FindFirstObjectByType<PlayerHand>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+        if (objectParent == null)
+            Debug.LogError("PlayerHandUI: objectParent is not assigned in Inspector.", this);
+
+        if (cardPrefab == null)
+            Debug.LogError("PlayerHandUI: cardPrefab is not assigned in Inspector.", this);
+
+        if (spawnPosition == null && objectParent != null)
+            spawnPosition = objectParent;
     }
 
     // public void UpdateHand()
@@ -68,13 +77,21 @@ public class PlayerHandUI : MonoBehaviour
 
     public void AddCard(CardData card)
     {
+        if (cardPrefab == null || objectParent == null)
+        {
+            Debug.LogError("PlayerHandUI.AddCard: cardPrefab or objectParent not assigned.");
+            return;
+        }
+
         GameObject obj = Instantiate(cardPrefab, objectParent);
 
         RectTransform rect = obj.GetComponent<RectTransform>();
-        rect.anchoredPosition = spawnPosition.anchoredPosition;
+        if (rect != null)
+            rect.anchoredPosition = spawnPosition != null ? spawnPosition.anchoredPosition : Vector2.zero;
 
         CardUI ui = obj.GetComponent<CardUI>();
-        ui.Initialize(card, playerHand);
+        if (ui != null)
+            ui.Initialize(card, playerHand);
 
         activeObjects.Add(obj);
 
@@ -83,13 +100,19 @@ public class PlayerHandUI : MonoBehaviour
 
     public void RemoveCard(CardData card)
     {
-        for (int i = 0; i < activeObjects.Count; i++)
+        for (int i = activeObjects.Count - 1; i >= 0; i--)
         {
-            CardUI ui = activeObjects[i].GetComponent<CardUI>();
-
-            if (ui.Card == card)
+            GameObject go = activeObjects[i];
+            if (go == null)
             {
-                Destroy(activeObjects[i]);
+                activeObjects.RemoveAt(i);
+                continue;
+            }
+
+            CardUI ui = go.GetComponent<CardUI>();
+            if (ui != null && ui.Card == card)
+            {
+                Destroy(go);
                 activeObjects.RemoveAt(i);
                 LayoutCards();
                 return;
@@ -102,7 +125,10 @@ public class PlayerHandUI : MonoBehaviour
         if (cardObject == null)
             return;
 
-        activeObjects.Remove(cardObject);
+        bool removed = activeObjects.Remove(cardObject);
+        if (!removed)
+            Debug.LogWarning("PlayerHandUI.RemoveCardObject: object not found in activeObjects.", cardObject);
+
         LayoutCards(false);
     }
 
@@ -114,32 +140,65 @@ public class PlayerHandUI : MonoBehaviour
         LayoutCards(false);
     }
 
-    public IEnumerator DiscardCardsAnimated()
+    public IEnumerator DiscardCardsAnimated(float stagger = 0.08f, bool addToDiscardOnFinish = true)
     {
         isDiscarding = true;
 
-        Debug.Log("is discardinh");
+        // Use the top-most Canvas rect so positions are consistent
+        Canvas rootCanvas = objectParent != null ? objectParent.GetComponentInParent<Canvas>() : null;
+        RectTransform animationParent = rootCanvas != null ? (rootCanvas.transform as RectTransform) : objectParent;
 
         while (activeObjects.Count > 0)
         {
-            GameObject obj = activeObjects[0];
-            activeObjects.RemoveAt(0);
+            GameObject obj = activeObjects[activeObjects.Count - 1];
+            activeObjects.RemoveAt(activeObjects.Count - 1);
+
+            if (obj == null)
+            {
+                yield return null;
+                continue;
+            }
 
             CardUI ui = obj.GetComponent<CardUI>();
-            
-            ui.isAnimating = true;
+            if (ui != null)
+                ui.isAnimating = true;
 
-            yield return obj.GetComponent<CardActionAnimation>().AnimateTo(
-                objectParent,
-                discardPile,
-                null
-            );
+            var anim = obj.GetComponent<CardActionAnimation>();
+            if (anim != null)
+            {
+                // Capture local vars for the callback closure
+                CardData cardData = ui != null ? ui.Card : null;
+                GameObject objToDestroy = obj;
 
-            Destroy(obj);
+                // Start the animation without waiting for it to finish
+                StartCoroutine(anim.AnimateTo(animationParent, discardPile, () =>
+                {
+                    // Called when this card's animation completes
+                    if (addToDiscardOnFinish && cardData != null)
+                    {
+                        // Ensure playerDeck reference
+                        if (playerDeck == null)
+                            playerDeck = FindFirstObjectByType<PlayerDeck>();
 
-            yield return new WaitForSeconds(0.05f);
+                        if (playerDeck != null)
+                            playerDeck.AddToDiscard(cardData);
+                    }
+
+                    // Destroy the card object after its animation finishes
+                    Destroy(objToDestroy);
+                }));
+            }
+            else
+            {
+                Debug.LogWarning("DiscardCardsAnimated: CardActionAnimation missing on card object.", obj);
+                Destroy(obj);
+            }
+
+            // Stagger the start of the next card's animation (adjust to taste)
+            yield return new WaitForSeconds(stagger);
         }
 
+        // All animations started (they will still finish in background)
         isDiscarding = false;
     }
 
@@ -253,10 +312,13 @@ public class PlayerHandUI : MonoBehaviour
 
             rect.SetSiblingIndex(i);
         }
+        
 
         if (hoveredIndex >= 0 && hoveredIndex < activeObjects.Count)
         {
-            activeObjects[hoveredIndex].transform.SetAsLastSibling();
+            GameObject hoveredObj = activeObjects[hoveredIndex];
+            if (hoveredObj != null)
+                hoveredObj.transform.SetAsLastSibling();
         }
     }
 }

@@ -11,7 +11,7 @@ public class PlayerResource : MonoBehaviour
         return CurrentFocus >= cost;
     }
 
-    public bool Spend(int cost)
+    public bool SpendFocus(int cost)
     {
         if (!CanAfford(cost))
             return false;
@@ -20,17 +20,17 @@ public class PlayerResource : MonoBehaviour
         return true;
     }
 
-    public void Gain(int amount)
+    public void GainFocus(int amount)
     {
         CurrentFocus = Mathf.Min(CurrentFocus + amount, MaxFocus);
     }
 
-    public void RestoreToMax()
+    public void RestoreToMaxFocus()
     {
         CurrentFocus = MaxFocus;
     }
 
-    public void SetMax(int newMax)
+    public void SetMaxFocus(int newMax)
     {
         MaxFocus = newMax;
         CurrentFocus = Mathf.Min(CurrentFocus, MaxFocus);
