@@ -98,6 +98,182 @@ public class PlayerHandUI : MonoBehaviour
         LayoutCards(false);
     }
 
+    public IEnumerator RevealDrawnCard(CardData card,
+        float staggerToCenter = 0.0f,
+        float flipDuration = 0.16f,
+        float holdAfterFlip = 0.35f)
+    {
+        if (cardPrefab == null || objectParent == null)
+        {
+            Debug.LogWarning("RevealDrawnCard: missing prefab or parent — using AddCard fallback.");
+            AddCard(card);
+            yield break;
+        }
+
+        // Instantiate visual under objectParent first so CardUI.Initialize can run
+        GameObject obj = Instantiate(cardPrefab, objectParent);
+        RectTransform rect = obj.GetComponent<RectTransform>();
+        CardUI ui = obj.GetComponent<CardUI>();
+        if (ui != null)
+            ui.Initialize(card, playerHand);
+
+        activeObjects.Add(obj);
+        if (ui != null) ui.isAnimating = true;
+
+        // Choose animation parent as root Canvas RectTransform
+        Canvas rootCanvas = objectParent != null ? objectParent.GetComponentInParent<Canvas>() : null;
+        RectTransform animationParent = rootCanvas != null ? (rootCanvas.transform as RectTransform) : objectParent;
+
+        // Ensure the card's RectTransform is in the animation parent's coordinate space while animating
+        rect.SetParent(animationParent, true);
+
+        // Build a temporary center target if you don't have one assigned
+        RectTransform centerTarget = null;
+        if (/* you have a revealTarget field and it's assigned */ false)
+        {
+            // if you added a serialized revealTarget, use it
+            // centerTarget = revealTarget;
+        }
+        else
+        {
+            // Create temp RectTransform at center (anchored 0,0)
+            GameObject temp = new GameObject("RevealCenterTarget", typeof(RectTransform));
+            temp.transform.SetParent(animationParent, false);
+            centerTarget = temp.GetComponent<RectTransform>();
+            centerTarget.anchoredPosition = Vector2.zero;
+            centerTarget.sizeDelta = Vector2.zero;
+        }
+
+        // Move to center (AnimateToNoFade uses its internal moveDuration)
+        var anim = obj.GetComponent<CardActionAnimation>();
+        if (anim != null)
+        {
+            yield return StartCoroutine(anim.AnimateToNoFade(animationParent, centerTarget, null));
+        }
+        else
+        {
+            // fallback simple move (quick)
+            Vector2 originalPos = rect.anchoredPosition;
+            float localT = 0f;
+            float dur = 0.18f;
+            while (localT < dur)
+            {
+                localT += Time.deltaTime;
+                float s = Mathf.SmoothStep(0f, 1f, localT / dur);
+                rect.anchoredPosition = Vector2.Lerp(originalPos, Vector2.zero, s);
+                yield return null;
+            }
+            rect.anchoredPosition = Vector2.zero;
+        }
+
+        // Optional stagger before flip
+        if (staggerToCenter > 0f)
+            yield return new WaitForSeconds(staggerToCenter);
+
+        // Do flip effect: scale X -> 0 -> back to simulate flip
+        float flipTimer = 0f;
+        float fromScaleX = rect.localScale.x;
+        while (flipTimer < flipDuration)
+        {
+            flipTimer += Time.deltaTime;
+            float ft = flipTimer / flipDuration;
+            float angle = Mathf.Lerp(0f, 180f, ft);
+            float width = Mathf.Abs(Mathf.Cos(angle * Mathf.Deg2Rad));
+            rect.localScale = new Vector3(width * 1.25f, rect.localScale.y, rect.localScale.z);
+            yield return null;
+        }
+        // restore scale to enlarged after flip
+        rect.localScale = Vector3.one * 1.25f;
+
+        // Hold so player can see the revealed card
+        yield return new WaitForSeconds(holdAfterFlip);
+
+        // Prepare to move back: reparent to animationParent? it's already there.
+        // Compute the spawn target (where the card should return in the hand).
+        RectTransform returnTarget = null;
+        if (spawnPosition != null)
+        {
+            // Create a temporary RectTransform at spawnPosition.world position under animationParent
+            GameObject tempBack = new GameObject("RevealReturnTarget", typeof(RectTransform));
+            tempBack.transform.SetParent(animationParent, false);
+            returnTarget = tempBack.GetComponent<RectTransform>();
+
+            // Convert spawnPosition world to local of animationParent
+            Canvas canvas = animationParent.GetComponentInParent<Canvas>();
+            Camera cam = canvas != null ? canvas.worldCamera : null;
+            Vector2 spawnScreen = RectTransformUtility.WorldToScreenPoint(cam, spawnPosition.position);
+            Vector2 spawnLocal;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(animationParent, spawnScreen, cam, out spawnLocal);
+            returnTarget.anchoredPosition = spawnLocal;
+            returnTarget.sizeDelta = Vector2.zero;
+        }
+        else
+        {
+            // fallback to a spot slightly below center
+            GameObject tempBack = new GameObject("RevealReturnTarget", typeof(RectTransform));
+            tempBack.transform.SetParent(animationParent, false);
+            returnTarget = tempBack.GetComponent<RectTransform>();
+            returnTarget.anchoredPosition = new Vector2(0f, -100f);
+            returnTarget.sizeDelta = Vector2.zero;
+        }
+
+        // Animate back to the spawn target (no fade)
+        if (anim != null)
+        {
+            yield return StartCoroutine(anim.AnimateToNoFade(animationParent, returnTarget, null));
+        }
+        else
+        {
+            // fallback simple move back
+            Vector2 cur = rect.anchoredPosition;
+            float dur2 = 0.18f;
+            float tt = 0f;
+            while (tt < dur2)
+            {
+                tt += Time.deltaTime;
+                float s = Mathf.SmoothStep(0f, 1f, tt / dur2);
+                rect.anchoredPosition = Vector2.Lerp(cur, returnTarget.anchoredPosition, s);
+                yield return null;
+            }
+            rect.anchoredPosition = returnTarget.anchoredPosition;
+        }
+
+        // Clean up temp targets if created
+        if (centerTarget != null && centerTarget.gameObject.name == "RevealCenterTarget")
+            Destroy(centerTarget.gameObject);
+        if (returnTarget != null && returnTarget.gameObject.name.StartsWith("RevealReturnTarget"))
+            Destroy(returnTarget.gameObject);
+
+        // Now restore parent into objectParent so LayoutCards controls final placement
+        rect.SetParent(objectParent, false);
+
+        // Mark animation complete so layout repositions it into the fan
+        if (ui != null) ui.isAnimating = false;
+
+        // Let the layout position it
+        LayoutCards(false);
+
+        yield break;
+    }
+
+    // Add an existing GameObject (already-initialized) into the hand visuals list
+    public void AddExistingCardObject(GameObject obj, CardData card)
+    {
+        if (obj == null)
+            return;
+
+        CardUI ui = obj.GetComponent<CardUI>();
+        if (ui != null)
+            ui.Initialize(card, playerHand);
+
+        // Parent it under the hand objectParent and register
+        obj.transform.SetParent(objectParent, false);
+        activeObjects.Add(obj);
+
+        // Let the regular layout position it
+        LayoutCards(false);
+    }
+
     public void RemoveCard(CardData card)
     {
         for (int i = activeObjects.Count - 1; i >= 0; i--)

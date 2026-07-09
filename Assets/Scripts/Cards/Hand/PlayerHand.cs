@@ -32,12 +32,31 @@ public class PlayerHand : MonoBehaviour
         if (IsHandFull())
             return;
 
-        CardData drawnCard = playerDeck.DrawCard();
+        if (playerDeck == null)
+            playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+        CardData drawnCard = playerDeck != null ? playerDeck.DrawCard() : null;
 
         if (drawnCard == null)
             return;
 
-        Add(drawnCard);
+        // Add to logical hand immediately
+        currentCards.Add(drawnCard);
+
+        // Start visualization: let hand UI animate the visual reveal, then place it into the hand visuals.
+        if (handUI == null)
+            handUI = FindAnyObjectByType<PlayerHandUI>();
+
+        if (handUI != null)
+        {
+            // Start the reveal coroutine on the UI (non-blocking)
+            handUI.StartCoroutine(handUI.RevealDrawnCard(drawnCard));
+        }
+        else
+        {
+            // Fallback to just creating a visual if handUI is missing
+            Add(drawnCard);
+        }
     }
 
     public void PlayCardFromHand(CardData card)
