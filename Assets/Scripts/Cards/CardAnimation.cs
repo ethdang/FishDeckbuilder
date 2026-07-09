@@ -10,6 +10,9 @@ public class CardActionAnimation : MonoBehaviour
     [SerializeField] private float fadeDuration = 0.20f;
     [SerializeField] private float enlargedScale = 1.35f;
 
+    // A time scale applied to all internal durations. 1 = normal, 0.5 = twice as fast, 2 = half speed.
+    public float timeScale = 1f;
+
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
 
@@ -51,12 +54,17 @@ public class CardActionAnimation : MonoBehaviour
         Vector3 startScale = rectTransform.localScale;
         Vector3 targetScale = Vector3.one * enlargedScale;
 
+        // Apply timeScale to durations
+        float md = Mathf.Max(0.001f, moveDuration * timeScale);
+        float hd = Mathf.Max(0f, holdDuration * timeScale);
+        float fd = Mathf.Max(0.001f, fadeDuration * timeScale);
+
         float timer = 0f;
         // Move
-        while (timer < moveDuration)
+        while (timer < md)
         {
             timer += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, timer / moveDuration);
+            float t = Mathf.SmoothStep(0f, 1f, timer / md);
             rectTransform.anchoredPosition = Vector2.Lerp(startPosition, targetPosition, t);
             rectTransform.localScale = Vector3.Lerp(startScale, targetScale, t);
             rectTransform.localRotation = Quaternion.identity;
@@ -67,16 +75,16 @@ public class CardActionAnimation : MonoBehaviour
         rectTransform.localScale = targetScale;
         rectTransform.localRotation = Quaternion.identity;
 
-        yield return new WaitForSeconds(holdDuration);
+        yield return new WaitForSeconds(hd);
 
         if (doFade)
         {
             timer = 0f;
             Vector3 endScale = targetScale * 0.5f;
-            while (timer < fadeDuration)
+            while (timer < fd)
             {
                 timer += Time.deltaTime;
-                float t = Mathf.SmoothStep(0f, 1f, timer / fadeDuration);
+                float t = Mathf.SmoothStep(0f, 1f, timer / fd);
                 rectTransform.localScale = Vector3.Lerp(targetScale, endScale, t);
                 canvasGroup.alpha = Mathf.Lerp(1f, 0f, t);
                 yield return null;
@@ -95,20 +103,16 @@ public class CardActionAnimation : MonoBehaviour
 
     public IEnumerator AnimateTo(RectTransform parentRect, RectTransform target, Action onFinished = null)
     {
-        // Debug.Log($"[CardActionAnimation] AnimateTo START on {gameObject.GetInstanceID()} -> target {target?.name}");
         yield return StartCoroutine(RunMove(parentRect, target, true, () =>
         {
-            // Debug.Log($"[CardActionAnimation] AnimateTo FINISH on {gameObject.GetInstanceID()} -> target {target?.name}");
             onFinished?.Invoke();
         }));
     }
 
     public IEnumerator AnimateToNoFade(RectTransform parentRect, RectTransform target, Action onFinished = null)
     {
-        // Debug.Log($"[CardActionAnimation] AnimateToNoFade START on {gameObject.GetInstanceID()} -> target {target?.name}");
         yield return StartCoroutine(RunMove(parentRect, target, false, () =>
         {
-            // Debug.Log($"[CardActionAnimation] AnimateToNoFade FINISH on {gameObject.GetInstanceID()} -> target {target?.name}");
             onFinished?.Invoke();
         }));
     }

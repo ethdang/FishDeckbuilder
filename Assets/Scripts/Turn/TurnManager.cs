@@ -8,13 +8,13 @@ public class TurnManager : MonoBehaviour
 
     public List<PendingEffect> pendingEffects = new();
 
-    private bool isEndingTurn = false;
-
     private PlayerHand playerHand;
     private PlayerHandUI handUI;
     private PlayerDeck playerDeck;
     private CardManager cardManager;
     private ContextManager contextManager;
+
+    private bool isEndingTurn = false;
 
     void Awake()
     {
@@ -34,14 +34,23 @@ public class TurnManager : MonoBehaviour
 
     private IEnumerator EndTurnRoutine()
     {
-        // Wait for discard animation coroutine to finish before drawing
         if (handUI != null)
         {
+            // Wait for discard coroutine to finish (handUI will perform animations)
             yield return StartCoroutine(handUI.DiscardCardsAnimated());
-        }
-        playerHand.DrawToStartingHandSize();
 
-        cardManager.RemoveEndOfTurnModifiers();
+            // optional buffer between discard and draw (configurable on handUI)
+            float buffer = 0f;
+            try { buffer = handUI.postDiscardBuffer; } catch { buffer = 0f; }
+            if (buffer > 0f)
+                yield return new WaitForSeconds(buffer);
+        }
+
+        if (playerHand != null)
+            playerHand.DrawToStartingHandSize();
+
+        if (cardManager != null)
+            cardManager.RemoveEndOfTurnModifiers();
 
         turn++;
 
