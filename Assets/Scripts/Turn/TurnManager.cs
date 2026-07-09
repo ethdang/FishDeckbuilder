@@ -8,6 +8,8 @@ public class TurnManager : MonoBehaviour
 
     public List<PendingEffect> pendingEffects = new();
 
+    private bool isEndingTurn = false;
+
     private PlayerHand playerHand;
     private PlayerHandUI handUI;
     private PlayerDeck playerDeck;
@@ -25,23 +27,20 @@ public class TurnManager : MonoBehaviour
 
     public void EndTurn()
     {
+        if (isEndingTurn) return;
+        isEndingTurn = true;
         StartCoroutine(EndTurnRoutine());
     }
 
-
     private IEnumerator EndTurnRoutine()
     {
-        StartCoroutine(handUI.DiscardCardsAnimated());
-
-        int safety = 0;
-
-        while (handUI.isDiscarding && safety <= 100)
+        // Wait for discard animation coroutine to finish before drawing
+        if (handUI != null)
         {
-            safety++;
-            yield return new WaitForEndOfFrame();   
+            yield return StartCoroutine(handUI.DiscardCardsAnimated());
         }
-
         playerHand.DrawToStartingHandSize();
+
         cardManager.RemoveEndOfTurnModifiers();
 
         turn++;
@@ -57,6 +56,8 @@ public class TurnManager : MonoBehaviour
                 pendingEffects.RemoveAt(i);
             }
         }
+
+        isEndingTurn = false;
     }
 
     public void Reset()

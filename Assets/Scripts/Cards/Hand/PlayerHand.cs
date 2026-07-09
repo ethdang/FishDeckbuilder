@@ -131,7 +131,7 @@ public class PlayerHand : MonoBehaviour
     public void DrawToStartingHandSize()
     {
         Debug.Log(handUI.isDiscarding);
-        int safety = 50;
+        int safety = 20;
 
         while (currentCards.Count < startingHandSize && safety-- > 0)
         {
