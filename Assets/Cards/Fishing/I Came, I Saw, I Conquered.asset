@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2decfc3fdc36641768fe0943ea43b9ed, type: 3}
+  m_Name: I Came, I Saw, I Conquered
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardName: I Came, I Saw, I Conquered
+  description: reveal 1 card, then 2 cards, then 3 cards from the encounter deck
+    seperately, each on consecutive turns
+  category: 2
+  cost: 3
+  effects:
+  - {fileID: 11400000, guid: 400191a4c7d1b49a2bb31c054404db89, type: 2}
+  - {fileID: 11400000, guid: 9d8d10e4e2cd14fefb61f56ee4578685, type: 2}
+  - {fileID: 11400000, guid: 2cae21aa7dd4e44619ffccfe9318b5ac, type: 2}

@@ -20,7 +20,7 @@ public class PlayerResource : MonoBehaviour
         return true;
     }
 
-    public void GainFocus(int amount)
+    public void AddFocus(int amount)
     {
         CurrentFocus = Mathf.Min(CurrentFocus + amount, MaxFocus);
     }

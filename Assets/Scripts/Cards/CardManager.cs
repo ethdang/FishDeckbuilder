@@ -27,15 +27,37 @@ public class CardManager : MonoBehaviour
     public void PlayCard(CardData card)
     {
         int cost = card.cost;
+        int playCount = 1;
+
+        List<CardEffect> effects = new(card.effects);
+        List<CardModifier> usedModifiers = new();
 
         foreach (CardModifier modifier in modifiers)
         {
-            modifier.ModifyCost(cost);
+            playCount = modifier.ModifyPlayCount(playCount);
+            cost = modifier.ModifyCost(cost);
+            effects = modifier.ModifyEffects(effects);
+
+            modifier.remainingUses--;
+
+            if (modifier.remainingUses <= 0)
+            {
+                usedModifiers.Add(modifier);
+            }
+
+            if (modifier.duration == ModifierDuration.NextCard)
+                usedModifiers.Add(modifier);
+
         }
 
         playerResource.SpendFocus(cost);
 
-        foreach (CardEffect effect in card.effects)
+        foreach (CardModifier modifier in usedModifiers)
+        {
+            modifiers.Remove(modifier);
+        }
+
+        foreach (CardEffect effect in effects)
         {
             if (effect.turnDelay > 0)
             {
@@ -43,43 +65,20 @@ public class CardManager : MonoBehaviour
                 continue;
             }
 
-            effect.Execute(contextManager.GetContext());
+            for (int i = 0; i < playCount; i++)
+            {
+                effect.Execute(contextManager.GetContext());
+            }
 
             LogEffect(effect);
         }
     }
 
-    // public void ExecuteEffect(CardEffect effect)
-    // {
-    //     switch (effect.ability)
-    //     {
-    //         case CardAbility.Draw:
-    //             DrawCards(effect.amount);
-    //             break;
-
-    //         case CardAbility.ShuffleDeck:
-    //             Shuffle(effect.targetDeck);
-    //             break;
-
-    //         case CardAbility.DrawUntil:
-    //             DrawUntil(effect.targetCategory);
-    //             break;
-
-    //         case CardAbility.AddFocus:
-    //             playerResource.GainFocus(effect.amount);
-    //             break;
-
-    //         case CardAbility.IncreaseMaxFocus:
-    //             playerResource.SetMaxFocus(playerResource.MaxFocus + effect.amount);
-    //             break;
-
-    //         case CardAbility.SetFocusNextCard:
-    //             // we log the effect later on.
-    //             break;
-    //     }
-
-        
-    // }
+    public void RemoveEndOfTurnModifiers()
+    {
+        modifiers.RemoveAll(
+            modifier => modifier.duration == ModifierDuration.EndOfTurn);
+    }
 
     public bool CanExecute(CardData card)
     {

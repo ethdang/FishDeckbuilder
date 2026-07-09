@@ -7,10 +7,3 @@ public class EncounterCardData : ScriptableObject
     public FishData fishData;
     public bool IsFish => category == CardCategory.Encounter_Fish;
 }
-
-public enum CardCategory
-{
-    Encounter_Water,
-    Encounter_Fish,
-    Player_Fishing
-}

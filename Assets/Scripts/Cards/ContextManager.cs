@@ -9,6 +9,7 @@ public class ContextManager : MonoBehaviour
     private PlayerResource resource;
     private TurnManager turnManager;
     private EncounterRevealArea revealArea;
+    private CardManager cardManager;
     
 
     void Awake()
@@ -19,6 +20,7 @@ public class ContextManager : MonoBehaviour
         resource = FindFirstObjectByType<PlayerResource>();
         turnManager = FindFirstObjectByType<TurnManager>();
         revealArea = FindFirstObjectByType<EncounterRevealArea>();
+        cardManager = FindFirstObjectByType<CardManager>();
     }
 
     public CardContext GetContext()
@@ -31,6 +33,7 @@ public class ContextManager : MonoBehaviour
         newContext.resource = resource;
         newContext.turnManager = turnManager;
         newContext.revealArea = revealArea;
+        newContext.cardManager = cardManager;
 
         return newContext;
     }
@@ -44,4 +47,5 @@ public class CardContext
     public PlayerResource resource;
     public TurnManager turnManager;
     public EncounterRevealArea revealArea;
+    public CardManager cardManager;
 }

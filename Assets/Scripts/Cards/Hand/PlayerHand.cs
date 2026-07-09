@@ -42,19 +42,41 @@ public class PlayerHand : MonoBehaviour
 
     public void PlayCardFromHand(CardData card)
     {
-        if (!currentCards.Contains(card))
-            return;
+        Debug.Log($"[PlayerHand {GetInstanceID()}] PlayCardFromHand called for '{card?.cardName}'. currentCards count before: {currentCards.Count}");
 
-        Debug.Log($"Played {card.cardName}");
+        if (!currentCards.Contains(card))
+        {
+            // Print a helpful diagnostic of the currentCards contents
+            string names = currentCards.Count == 0 ? "<empty>" :
+                string.Join(", ", currentCards.ConvertAll(c => c != null ? c.cardName : "<null>"));
+            Debug.LogWarning($"[PlayerHand {GetInstanceID()}] PlayCardFromHand: card not found in currentCards. card='{card?.cardName}'. currentCards=[{names}]");
+            return;
+        }
 
         currentCards.Remove(card);
+        Debug.Log($"[PlayerHand {GetInstanceID()}] Removed card from currentCards. New count: {currentCards.Count}");
 
-        playerDeck.AddToDiscard(card);
-        cardManager.PlayCard(card);
+        // Update game state (discard + execution)
+        if (playerDeck == null)
+            playerDeck = FindFirstObjectByType<PlayerDeck>();
 
-        Debug.Log($"Cards remaining: {currentCards.Count}");
+        if (playerDeck != null)
+            playerDeck.AddToDiscard(card);
+        else
+            Debug.LogWarning($"[PlayerHand {GetInstanceID()}] playerDeck is null; can't add to discard.");
 
-        handUI.RemoveCard(card); // ONLY visual removal here
+        if (cardManager == null)
+            cardManager = FindFirstObjectByType<CardManager>();
+
+        if (cardManager != null)
+            cardManager.PlayCard(card);
+        else
+            Debug.LogWarning($"[PlayerHand {GetInstanceID()}] cardManager is null; can't execute card.");
+
+        Debug.Log($"[PlayerHand {GetInstanceID()}] PlayCardFromHand finished. Cards remaining: {currentCards.Count}");
+
+        // NOTE: do NOT attempt to remove visuals here. Visual removal is handled by animation callbacks
+        // which will call handUI.RemoveCardObject(gameObject) to remove the exact GameObject instance.
     }
 
     public void Add(CardData newCard)

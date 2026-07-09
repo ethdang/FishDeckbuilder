@@ -123,14 +123,27 @@ public class PlayerHandUI : MonoBehaviour
     public void RemoveCardObject(GameObject cardObject)
     {
         if (cardObject == null)
+        {
+            Debug.LogWarning("PlayerHandUI.RemoveCardObject called with null.");
             return;
+        }
+
+        Debug.Log($"[PlayerHandUI] RemoveCardObject called for object {cardObject.GetInstanceID()}. activeObjects before: {activeObjects.Count}");
 
         bool removed = activeObjects.Remove(cardObject);
+
         if (!removed)
-            Debug.LogWarning("PlayerHandUI.RemoveCardObject: object not found in activeObjects.", cardObject);
+        {
+            Debug.LogWarning($"[PlayerHandUI] RemoveCardObject: object not found in activeObjects: {cardObject.GetInstanceID()}", cardObject);
+        }
+        else
+        {
+            Destroy(cardObject);
+            Debug.Log($"[PlayerHandUI] Removed visual object. activeObjects now: {activeObjects.Count}");
+        }
 
         LayoutCards(false);
-    }
+}
 
     void LateUpdate()
     {
@@ -295,19 +308,30 @@ public class PlayerHandUI : MonoBehaviour
 
             if (ui != null)
             {
+                // Always set the target values — CardUI will perform the smoothing and actually write the RectTransform.
+                ui.TargetPosition = targetPos;
+                ui.TargetRotation = targetRot;
+                ui.TargetScale = targetScale;
+
+                // If snap is requested, also immediately apply them so the card doesn't interpolate visually.
                 if (snap)
                 {
-                    ui.TargetPosition = targetPos;
-                    ui.TargetRotation = targetRot;
-                    ui.TargetScale = targetScale;
+                    RectTransform r = cardObject.GetComponent<RectTransform>();
+                    if (r != null)
+                    {
+                        r.anchoredPosition = targetPos;
+                        r.localRotation = targetRot;
+                        r.localScale = targetScale;
+                    }
                 }
-                else
-                {
-                    float s = Time.deltaTime * layoutSmoothSpeed;
-                    rect.anchoredPosition = Vector2.Lerp(rect.anchoredPosition, targetPos, s);
-                    rect.localRotation = Quaternion.Slerp(rect.localRotation, targetRot, s);
-                    rect.localScale = Vector3.Lerp(rect.localScale, targetScale, s);
-                }
+            }
+            else
+            {
+                // If there's no CardUI for some reason, fall back to directly updating the rect.
+                float s = Time.deltaTime * layoutSmoothSpeed;
+                rect.anchoredPosition = Vector2.Lerp(rect.anchoredPosition, targetPos, s);
+                rect.localRotation = Quaternion.Slerp(rect.localRotation, targetRot, s);
+                rect.localScale = Vector3.Lerp(rect.localScale, targetScale, s);
             }
 
             rect.SetSiblingIndex(i);

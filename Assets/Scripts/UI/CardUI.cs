@@ -62,6 +62,14 @@ public class CardUI : MonoBehaviour,
 
         if (descriptionText != null)
             descriptionText.text = card.description;
+
+        // Make sure initial targets reflect the current transform to avoid jumps.
+        if (rectTransform != null)
+        {
+            TargetPosition = rectTransform.anchoredPosition;
+            TargetRotation = rectTransform.localRotation;
+            TargetScale = rectTransform.localScale;
+        }
     }
 
     void Awake()
@@ -69,13 +77,22 @@ public class CardUI : MonoBehaviour,
         cardActionAnimation = GetComponent<CardActionAnimation>();
         rectTransform = GetComponent<RectTransform>();
 
-        if (cardActionAnimation == null)
-            Debug.LogWarning("CardUI: CardActionAnimation component is missing on prefab.", this);
+        // Initialize smoothing targets so LateUpdate has sane values from the start.
+        if (rectTransform != null)
+        {
+            TargetPosition = rectTransform.anchoredPosition;
+            TargetRotation = rectTransform.localRotation;
+            TargetScale = rectTransform.localScale;
+        }
 
         handUI = FindFirstObjectByType<PlayerHandUI>();
         playZone = FindFirstObjectByType<PlayZone>();
         playerResource = FindFirstObjectByType<PlayerResource>();
         cardManager = FindFirstObjectByType<CardManager>();
+        playerHand = FindFirstObjectByType<PlayerHand>();
+
+        if (cardActionAnimation == null)
+            Debug.LogWarning("CardUI: CardActionAnimation component is missing on prefab.", this);
 
         if (transform.parent != null)
             handParentRect = transform.parent as RectTransform;
@@ -122,6 +139,7 @@ public class CardUI : MonoBehaviour,
             return;
         }
 
+        // Single writer for the transform: CardUI uses Target* to smooth motion.
         rectTransform.anchoredPosition = Vector2.Lerp(
             rectTransform.anchoredPosition,
             TargetPosition,
@@ -209,8 +227,8 @@ public class CardUI : MonoBehaviour,
         if (!IsDragging)
             return;
 
-        bool overPlayZone = IsOverPlayZone(eventData);
         bool canExecute = (cardManager != null && cardManager.CanExecute(cardData));
+        bool overPlayZone = IsOverPlayZone(eventData);
 
         if (overPlayZone && canExecute)
         {
@@ -225,29 +243,68 @@ public class CardUI : MonoBehaviour,
             IsDragging = false;
             IsHovered = false;
 
+            // Capture local references for the callback closure to avoid relying on fields that may change.
+            CardData localCard = cardData;
+            PlayerHand localPlayerHand = playerHand != null ? playerHand : FindFirstObjectByType<PlayerHand>();
+            PlayerHandUI localHandUI = handUI != null ? handUI : FindFirstObjectByType<PlayerHandUI>();
+            GameObject visualObject = this.gameObject;
+            RectTransform animationParent = handParentRect != null ? handParentRect : (rectTransform.parent as RectTransform);
+
+            // Start the animation; when it finishes, update game logic and remove the visual by reference.
             StartCoroutine(cardActionAnimation.AnimateTo(
-                handParentRect,
+                animationParent,
                 playAnimationTarget,
-                OnCardPlayed));
+                () =>
+                {
+                    try
+                    {
+                        Debug.Log($"[CardUI] Animation finished for '{localCard?.cardName}' on object {visualObject.GetInstanceID()}");
+
+                        // Update logical game state (removes from currentCards, adds to discard, executes card)
+                        if (localPlayerHand != null)
+                        {
+                            localPlayerHand.PlayCardFromHand(localCard);
+                        }
+                        else
+                        {
+                            Debug.LogError("CardUI: playerHand is null in animation callback.", this);
+                        }
+
+                        // Remove the exact visual object from the hand UI (safe by-reference removal)
+                        if (localHandUI != null)
+                        {
+                            localHandUI.RemoveCardObject(visualObject);
+                        }
+                        else
+                        {
+                            // Fallback: destroy the visual if UI manager is missing
+                            Destroy(visualObject);
+                            Debug.LogWarning("CardUI: handUI is null in animation callback — destroyed visual object as fallback.", this);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"CardUI: Exception in animation callback: {ex}", this);
+                        // Ensure we don't leave the visual orphaned
+                        if (visualObject != null)
+                            Destroy(visualObject);
+                    }
+                }));
+
             return;
         }
         else
         {
-            Debug.Log("CardUI.OnEndDrag: cannot play card (not over play zone or cannot afford).");
+            if (!overPlayZone)
+                Debug.Log("CardUI.OnEndDrag: not over play zone");
+            else
+                Debug.Log("CardUI.OnEndDrag: cannot afford / cannot execute card");
         }
 
         IsDragging = false;
 
         if (handUI != null)
             handUI.LayoutCards();
-    }
-
-    private void OnCardPlayed()
-    {
-        if (playerHand != null)
-            playerHand.PlayCardFromHand(cardData);
-        else
-            Debug.LogError("CardUI.OnCardPlayed: playerHand is null. Can't play card.");
     }
 
     private bool IsOverPlayZone(PointerEventData eventData)

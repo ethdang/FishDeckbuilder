@@ -42,6 +42,7 @@ public class TurnManager : MonoBehaviour
         }
 
         playerHand.DrawToStartingHandSize();
+        cardManager.RemoveEndOfTurnModifiers();
 
         turn++;
 
