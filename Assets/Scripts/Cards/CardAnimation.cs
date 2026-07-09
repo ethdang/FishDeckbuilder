@@ -95,20 +95,20 @@ public class CardActionAnimation : MonoBehaviour
 
     public IEnumerator AnimateTo(RectTransform parentRect, RectTransform target, Action onFinished = null)
     {
-        Debug.Log($"[CardActionAnimation] AnimateTo START on {gameObject.GetInstanceID()} -> target {target?.name}");
+        // Debug.Log($"[CardActionAnimation] AnimateTo START on {gameObject.GetInstanceID()} -> target {target?.name}");
         yield return StartCoroutine(RunMove(parentRect, target, true, () =>
         {
-            Debug.Log($"[CardActionAnimation] AnimateTo FINISH on {gameObject.GetInstanceID()} -> target {target?.name}");
+            // Debug.Log($"[CardActionAnimation] AnimateTo FINISH on {gameObject.GetInstanceID()} -> target {target?.name}");
             onFinished?.Invoke();
         }));
     }
 
     public IEnumerator AnimateToNoFade(RectTransform parentRect, RectTransform target, Action onFinished = null)
     {
-        Debug.Log($"[CardActionAnimation] AnimateToNoFade START on {gameObject.GetInstanceID()} -> target {target?.name}");
+        // Debug.Log($"[CardActionAnimation] AnimateToNoFade START on {gameObject.GetInstanceID()} -> target {target?.name}");
         yield return StartCoroutine(RunMove(parentRect, target, false, () =>
         {
-            Debug.Log($"[CardActionAnimation] AnimateToNoFade FINISH on {gameObject.GetInstanceID()} -> target {target?.name}");
+            // Debug.Log($"[CardActionAnimation] AnimateToNoFade FINISH on {gameObject.GetInstanceID()} -> target {target?.name}");
             onFinished?.Invoke();
         }));
     }

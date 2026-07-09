@@ -1,6 +1,5 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
 
 public class PlayerHandUI : MonoBehaviour
@@ -29,7 +28,6 @@ public class PlayerHandUI : MonoBehaviour
     [Header("Smoothing")]
     [SerializeField] private float layoutSmoothSpeed = 14f;
 
-    // Reveal queue settings
     [Header("Reveal / Draw Visuals")]
     [SerializeField] private float revealStagger = 0.12f; // time between sequential reveals
     [SerializeField] private float revealHold = 0.35f; // how long to hold at play target
@@ -49,18 +47,7 @@ public class PlayerHandUI : MonoBehaviour
     {
         playerHand = FindFirstObjectByType<PlayerHand>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
-
-        if (objectParent == null)
-            Debug.LogError("PlayerHandUI: objectParent is not assigned in Inspector.", this);
-
-        if (cardPrefab == null)
-            Debug.LogError("PlayerHandUI: cardPrefab is not assigned in Inspector.", this);
-
-        if (spawnPosition == null && objectParent != null)
-            spawnPosition = objectParent;
     }
-
-    // --- Visual management (Add / Remove) ---
 
     public void AddCard(CardData card)
     {
@@ -70,19 +57,16 @@ public class PlayerHandUI : MonoBehaviour
             return;
         }
 
-        // Instantiate without preserving world position so local anchoredPosition is meaningful
-        GameObject obj = Instantiate(cardPrefab);
-        obj.transform.SetParent(objectParent, false);
+        GameObject obj = Instantiate(cardPrefab, objectParent);
 
         RectTransform rect = obj.GetComponent<RectTransform>();
-        if (rect != null)
-            rect.anchoredPosition = spawnPosition != null ? spawnPosition.anchoredPosition : Vector2.zero;
+        if (rect != null && spawnPosition != null)
+            rect.anchoredPosition = spawnPosition.anchoredPosition;
 
         CardUI ui = obj.GetComponent<CardUI>();
         if (ui != null)
             ui.Initialize(card, playerHand);
 
-        // Ensure CanvasGroup settings are interactive
         CanvasGroup cg = obj.GetComponent<CanvasGroup>();
         if (cg == null) cg = obj.AddComponent<CanvasGroup>();
         cg.alpha = 1f;
@@ -138,8 +122,7 @@ public class PlayerHandUI : MonoBehaviour
         LayoutCards(false);
     }
 
-    // --- Discard animation (staggered, per-card callback) ---
-    public IEnumerator DiscardCardsAnimated(float stagger = 0.08f, bool addToDiscardOnFinish = true)
+    public IEnumerator DiscardCardsAnimated()
     {
         isDiscarding = true;
 
@@ -167,20 +150,14 @@ public class PlayerHandUI : MonoBehaviour
                 CardData cardData = ui != null ? ui.Card : null;
                 GameObject objToDestroy = obj;
 
-                // Start animation without waiting (so animations overlap per stagger)
                 StartCoroutine(anim.AnimateTo(animationParent, discardPile, () =>
                 {
-                    // Called when this card's animation completes
-                    if (addToDiscardOnFinish && cardData != null)
-                    {
-                        if (playerDeck == null)
-                            playerDeck = FindFirstObjectByType<PlayerDeck>();
+                    if (cardData != null && playerDeck == null)
+                        playerDeck = FindFirstObjectByType<PlayerDeck>();
 
-                        if (playerDeck != null)
-                            playerDeck.AddToDiscard(cardData);
-                    }
+                    if (cardData != null && playerDeck != null)
+                        playerDeck.AddToDiscard(cardData);
 
-                    // Destroy the card object after its animation finishes
                     Destroy(objToDestroy);
                 }));
             }
@@ -190,15 +167,13 @@ public class PlayerHandUI : MonoBehaviour
                 Destroy(obj);
             }
 
-            yield return new WaitForSeconds(stagger);
+            yield return new WaitForSeconds(0.05f);
         }
 
         isDiscarding = false;
     }
 
-    // --- Reveal / draw queue API ---
-
-    // Called by PlayerHand.DrawCard (or similar) to show the draw animation in sequence
+    // Enqueue a drawn card for sequential reveal. Call this from PlayerHand.DrawCard.
     public void EnqueueReveal(CardData card)
     {
         if (card == null) return;
@@ -207,6 +182,40 @@ public class PlayerHandUI : MonoBehaviour
             StartCoroutine(ProcessRevealQueue());
     }
 
+    private IEnumerator ProcessRevealQueue()
+    {
+        isRevealing = true;
+
+        Canvas rootCanvas = objectParent != null ? objectParent.GetComponentInParent<Canvas>() : null;
+        RectTransform animationParent = rootCanvas != null ? (rootCanvas.transform as RectTransform) : objectParent;
+
+        Vector3 deckWorldPos = Vector3.zero;
+
+        while (revealQueue.Count > 0)
+        {
+            CardData card = revealQueue.Dequeue();
+            if (card == null) continue;
+
+            if (playerDeck == null)
+                playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+            if (playerDeck != null)
+                deckWorldPos = playerDeck.transform.position;
+            else if (objectParent != null)
+                deckWorldPos = objectParent.position;
+
+            yield return StartCoroutine(RevealFromDeckWorld(card, deckWorldPos));
+
+            if (revealStagger > 0f)
+                yield return new WaitForSeconds(revealStagger);
+        }
+
+        isRevealing = false;
+    }
+
+    // Reveal-from-deck flow:
+    // Instantiate a visual at deckWorldPos (not parented under the hand), animate it to the play target,
+    // present it, then immediately reparent it into the hand (no return animation), and register it in activeObjects.
     public IEnumerator RevealFromDeckWorld(CardData card, Vector3 deckWorldPos)
     {
         if (cardPrefab == null || objectParent == null)
@@ -216,11 +225,10 @@ public class PlayerHandUI : MonoBehaviour
             yield break;
         }
 
-        // Choose animation parent: top-most canvas rect so screen-space math is stable
         Canvas rootCanvas = objectParent != null ? objectParent.GetComponentInParent<Canvas>() : null;
         RectTransform animationParent = rootCanvas != null ? (rootCanvas.transform as RectTransform) : objectParent;
+        Camera cam = rootCanvas != null ? rootCanvas.worldCamera : null;
 
-        // Instantiate the visual under animationParent (not in the hand)
         GameObject obj = Instantiate(cardPrefab);
         obj.name = $"RevealTemp_{card.cardName}_{obj.GetInstanceID()}";
         obj.transform.SetParent(animationParent, false);
@@ -228,40 +236,33 @@ public class PlayerHandUI : MonoBehaviour
         RectTransform rect = obj.GetComponent<RectTransform>();
         CardUI ui = obj.GetComponent<CardUI>();
         if (ui != null)
-            ui.Initialize(card, playerHand); // sets texts etc.
+            ui.Initialize(card, playerHand);
 
-        // Place the temp visual at the deck world position (convert into animationParent's local coords)
-        Camera cam = rootCanvas != null ? rootCanvas.worldCamera : null;
         Vector2 deckScreen = RectTransformUtility.WorldToScreenPoint(cam, deckWorldPos);
         Vector2 deckLocal;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(animationParent, deckScreen, cam, out deckLocal);
         rect.anchoredPosition = deckLocal;
 
-        // Find the play target (use PlayZone's first child like your play animation does)
         PlayZone playZone = FindFirstObjectByType<PlayZone>();
         RectTransform playTarget = null;
         if (playZone != null && playZone.transform.childCount > 0)
             playTarget = playZone.transform.GetChild(0).GetComponent<RectTransform>();
 
-        // Use CardActionAnimation.AnimateToNoFade if present; fallback to manual move
         CardActionAnimation anim = obj.GetComponent<CardActionAnimation>();
         if (anim != null)
         {
-            // Use AnimateToNoFade if available (preferred)
-            var method = anim.GetType().GetMethod("AnimateToNoFade");
-            if (method != null)
+            var noFade = anim.GetType().GetMethod("AnimateToNoFade");
+            if (noFade != null)
             {
                 yield return StartCoroutine(anim.AnimateToNoFade(animationParent, playTarget != null ? playTarget : animationParent, null));
             }
             else
             {
-                // fallback to AnimateTo (may do fade). We still use it because it's available.
                 yield return StartCoroutine(anim.AnimateTo(animationParent, playTarget != null ? playTarget : animationParent, null));
             }
         }
         else
         {
-            // manual move: lerp from current to center of animationParent (0,0) or to playTarget if present
             Vector2 start = rect.anchoredPosition;
             Vector2 target = Vector2.zero;
             if (playTarget != null)
@@ -281,8 +282,8 @@ public class PlayerHandUI : MonoBehaviour
             rect.anchoredPosition = target;
         }
 
-        // "Present" / flip effect (scale X flip)
-        float flipDur = 0.16f;
+        // Present / flip effect
+        float flipDur = revealFlipDuration;
         float elapsed = 0f;
         float flipScale = 1.25f;
         while (elapsed < flipDur)
@@ -296,185 +297,39 @@ public class PlayerHandUI : MonoBehaviour
         }
         rect.localScale = Vector3.one * flipScale;
 
-        // Hold so the player sees the revealed card briefly
-        yield return new WaitForSeconds(0.35f);
+        // Hold so the player sees the revealed card
+        yield return new WaitForSeconds(revealHold);
 
-        // Compute the spawn target (where it should return into the hand), in animationParent local coords
-        Vector2 spawnLocal = Vector2.zero;
-        if (spawnPosition != null)
-        {
-            Vector2 spawnScreen = RectTransformUtility.WorldToScreenPoint(cam, spawnPosition.position);
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(animationParent, spawnScreen, cam, out spawnLocal);
-        }
-        else
-        {
-            // if spawnPosition missing, just place slightly below center
-            spawnLocal = new Vector2(0f, -100f);
-        }
-
-        // Animate back to the spawnLocal
-        if (anim != null)
-        {
-            // create a temporary RectTransform under animationParent to use as a target
-            GameObject tmpReturn = new GameObject("TempReturnTarget", typeof(RectTransform));
-            tmpReturn.transform.SetParent(animationParent, false);
-            RectTransform tmpRT = tmpReturn.GetComponent<RectTransform>();
-            tmpRT.anchoredPosition = spawnLocal;
-            tmpRT.sizeDelta = Vector2.zero;
-
-            var method = anim.GetType().GetMethod("AnimateToNoFade");
-            if (method != null)
-                yield return StartCoroutine(anim.AnimateToNoFade(animationParent, tmpRT, null));
-            else
-                yield return StartCoroutine(anim.AnimateTo(animationParent, tmpRT, null));
-
-            Destroy(tmpReturn);
-        }
-        else
-        {
-            Vector2 start2 = rect.anchoredPosition;
-            float d2 = 0.18f;
-            float tt = 0f;
-            while (tt < d2)
-            {
-                tt += Time.deltaTime;
-                float s = Mathf.SmoothStep(0f, 1f, tt / d2);
-                rect.anchoredPosition = Vector2.Lerp(start2, spawnLocal, s);
-                yield return null;
-            }
-            rect.anchoredPosition = spawnLocal;
-        }
-
-        // Now reparent the same object into the hand (objectParent). Use worldPositionStays = false so we can set anchoredPosition properly.
+        // Immediately reparent into the hand (no return animation)
         obj.transform.SetParent(objectParent, false);
 
-        // set anchored position to spawnPosition's anchored pos so hand layout starts from a sensible spot
         if (rect != null)
         {
             rect.anchoredPosition = spawnPosition != null ? spawnPosition.anchoredPosition : Vector2.zero;
-            rect.localScale = Vector3.one; // normalize scale
+            rect.localScale = Vector3.one;
         }
 
-        // Ensure the CardUI knows the new hand parent for drag math
+        // Notify CardUI of new parent rect if method exists
         if (ui != null)
         {
-            ui.RefreshHandParentRect(objectParent);
-            // also ensure the card is not flagged as animating so LayoutCards can control it
+            var refresh = ui.GetType().GetMethod("RefreshHandParentRect");
+            if (refresh != null)
+            {
+                refresh.Invoke(ui, new object[] { objectParent });
+            }
             ui.isAnimating = false;
         }
 
-        // Restore or add CanvasGroup interactivity so the card is clickable
         CanvasGroup cg = obj.GetComponent<CanvasGroup>();
         if (cg == null) cg = obj.AddComponent<CanvasGroup>();
         cg.alpha = 1f;
         cg.interactable = true;
         cg.blocksRaycasts = true;
 
-        // Register the canonical card with the hand visuals and re-layout
         activeObjects.Add(obj);
         LayoutCards(false);
 
         yield break;
-    }
-
-    private IEnumerator ProcessRevealQueue()
-    {
-        isRevealing = true;
-
-        Canvas rootCanvas = objectParent != null ? objectParent.GetComponentInParent<Canvas>() : null;
-        RectTransform animationParent = rootCanvas != null ? (rootCanvas.transform as RectTransform) : objectParent;
-
-        // find play area target if present (the same target used for playing cards)
-        PlayZone playZone = FindFirstObjectByType<PlayZone>();
-        RectTransform playTarget = null;
-        if (playZone != null && playZone.transform.childCount > 0)
-            playTarget = playZone.transform.GetChild(0).GetComponent<RectTransform>();
-
-        while (revealQueue.Count > 0)
-        {
-            CardData card = revealQueue.Dequeue();
-            if (card == null) continue;
-
-            yield return StartCoroutine(RevealToPlayAreaAndBack(card, animationParent, playTarget));
-
-            if (revealStagger > 0f)
-                yield return new WaitForSeconds(revealStagger);
-        }
-
-        isRevealing = false;
-    }
-
-    // Instantiate a temporary reveal visual, animate it to the play target (or center),
-    // flip/present it, animate back to spawn, then create the canonical hand card (AddCard).
-    private IEnumerator RevealToPlayAreaAndBack(CardData card, RectTransform animationParent, RectTransform playTarget)
-    {
-        Debug.Log($"[PlayerHandUI] Reveal start for '{card.cardName}'");
-
-        // create temp
-        GameObject temp = Instantiate(cardPrefab);
-        temp.name = $"RevealTemp_{card.cardName}_{temp.GetInstanceID()}";
-        temp.transform.SetParent(animationParent, false);
-        RectTransform tempRect = temp.GetComponent<RectTransform>();
-        CardUI tempUI = temp.GetComponent<CardUI>();
-        if (tempUI != null) tempUI.Initialize(card, playerHand);
-
-        CardActionAnimation anim = temp.GetComponent<CardActionAnimation>();
-        if (anim == null)
-        {
-            Debug.LogWarning("[PlayerHandUI] RevealToPlayAreaAndBack: CardActionAnimation missing on prefab, skipping reveal animation.");
-            AddCard(card);
-            Destroy(temp);
-            yield break;
-        }
-
-        // reveal target: prefer playTarget, else center anchor created under animationParent
-        RectTransform centerTarget = playTarget;
-        GameObject centerGO = null;
-        if (centerTarget == null)
-        {
-            centerGO = new GameObject("TempRevealCenter", typeof(RectTransform));
-            centerGO.transform.SetParent(animationParent, false);
-            centerTarget = centerGO.GetComponent<RectTransform>();
-            centerTarget.anchoredPosition = Vector2.zero;
-            centerTarget.sizeDelta = Vector2.zero;
-        }
-
-        // Animate to play area (no fade)
-        yield return StartCoroutine(anim.AnimateToNoFade(animationParent, centerTarget, null));
-
-        // flip/present
-        float fDur = revealFlipDuration;
-        float elapsed = 0f;
-        float flipScale = 1.25f;
-        while (elapsed < fDur)
-        {
-            elapsed += Time.deltaTime;
-            float p = elapsed / fDur;
-            float ang = Mathf.Lerp(0f, 180f, p);
-            float w = Mathf.Abs(Mathf.Cos(ang * Mathf.Deg2Rad));
-            tempRect.localScale = new Vector3(w * flipScale, tempRect.localScale.y, 1f);
-            yield return null;
-        }
-        tempRect.localScale = Vector3.one * flipScale;
-
-        // hold
-        yield return new WaitForSeconds(revealHold);
-
-        // compute return anchor under animationParent using spawnPosition world point
-        RectTransform returnTarget = CreateTempAnchorForWorldPoint(animationParent, spawnPosition != null ? spawnPosition.position : (objectParent != null ? objectParent.position : Vector3.zero));
-
-        // animate back to hand
-        yield return StartCoroutine(anim.AnimateToNoFade(animationParent, returnTarget, null));
-
-        // cleanup
-        if (centerGO != null) Destroy(centerGO);
-        if (returnTarget != null && returnTarget.gameObject.name.StartsWith("TempAnchor_return")) Destroy(returnTarget.gameObject);
-        Destroy(temp);
-
-        // add canonical card into hand (interactive)
-        AddCard(card);
-
-        Debug.Log($"[PlayerHandUI] Reveal complete for '{card.cardName}'");
     }
 
     // Helper to create a temporary RectTransform under parent at the world position converted to parent's local space
@@ -492,8 +347,6 @@ public class PlayerHandUI : MonoBehaviour
         rt.sizeDelta = Vector2.zero;
         return rt;
     }
-
-    // --- Layout ---
 
     public void LayoutCards(bool snap = false)
     {
@@ -520,7 +373,7 @@ public class PlayerHandUI : MonoBehaviour
 
             if (ui.IsDragging || ui.isAnimating)
                 continue;
-
+        
             if (ui.HoverProgress > hoveredProgress)
             {
                 hoveredProgress = ui.HoverProgress;
@@ -587,42 +440,27 @@ public class PlayerHandUI : MonoBehaviour
 
             if (ui != null)
             {
-                // Always set target values and let CardUI perform smoothing to avoid write races
-                ui.TargetPosition = targetPos;
-                ui.TargetRotation = targetRot;
-                ui.TargetScale = targetScale;
-
                 if (snap)
                 {
-                    if (rect != null)
-                    {
-                        rect.anchoredPosition = targetPos;
-                        rect.localRotation = targetRot;
-                        rect.localScale = targetScale;
-                    }
+                    ui.TargetPosition = targetPos;
+                    ui.TargetRotation = targetRot;
+                    ui.TargetScale = targetScale;
                 }
-            }
-            else
-            {
-                // Fallback if no CardUI present
-                float s = Time.deltaTime * layoutSmoothSpeed;
-                if (rect != null)
+                else
                 {
+                    float s = Time.deltaTime * layoutSmoothSpeed;
                     rect.anchoredPosition = Vector2.Lerp(rect.anchoredPosition, targetPos, s);
                     rect.localRotation = Quaternion.Slerp(rect.localRotation, targetRot, s);
                     rect.localScale = Vector3.Lerp(rect.localScale, targetScale, s);
                 }
             }
 
-            if (rect != null)
-                rect.SetSiblingIndex(i);
+            rect.SetSiblingIndex(i);
         }
 
         if (hoveredIndex >= 0 && hoveredIndex < activeObjects.Count)
         {
-            GameObject hoveredObj = activeObjects[hoveredIndex];
-            if (hoveredObj != null)
-                hoveredObj.transform.SetAsLastSibling();
+            activeObjects[hoveredIndex].transform.SetAsLastSibling();
         }
     }
 }

@@ -35,7 +35,7 @@ public class TurnManager : MonoBehaviour
 
         int safety = 0;
 
-        while (handUI.isDiscarding && safety <= 20)
+        while (handUI.isDiscarding && safety <= 50)
         {
             safety++;
             yield return null;   
