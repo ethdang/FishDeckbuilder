@@ -320,4 +320,9 @@ public class CardUI : MonoBehaviour,
             eventData.pressEventCamera
         );
     }
+
+    public void RefreshHandParentRect(RectTransform newParent)
+    {
+        handParentRect = newParent;
+    }
 }

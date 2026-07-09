@@ -15,10 +15,13 @@ public class PlayerHand : MonoBehaviour
     private PlayerHandUI handUI;
 
     void Awake()
-    {   
+    {
         cardManager = FindFirstObjectByType<CardManager>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
-        handUI = FindAnyObjectByType<PlayerHandUI>();
+        handUI = FindFirstObjectByType<PlayerHandUI>();
+
+        if (handUI == null)
+            Debug.LogWarning("PlayerHand: handUI not found in scene. Draw visuals will fallback to AddCard.");
     }
 
     [ContextMenu("Draw Test Card")]
@@ -42,15 +45,15 @@ public class PlayerHand : MonoBehaviour
 
         // Add to logical hand immediately
         currentCards.Add(drawnCard);
+        Debug.Log($"[PlayerHand] Drew '{drawnCard.cardName}'. currentCards count now {currentCards.Count}");
 
-        // Start visualization: let hand UI animate the visual reveal, then place it into the hand visuals.
+        // Start visualization: enqueue the reveal so draws animate sequentially
         if (handUI == null)
-            handUI = FindAnyObjectByType<PlayerHandUI>();
+            handUI = FindFirstObjectByType<PlayerHandUI>();
 
         if (handUI != null)
         {
-            // Start the reveal coroutine on the UI (non-blocking)
-            handUI.StartCoroutine(handUI.RevealDrawnCard(drawnCard));
+            handUI.EnqueueReveal(drawnCard);
         }
         else
         {
@@ -65,7 +68,6 @@ public class PlayerHand : MonoBehaviour
 
         if (!currentCards.Contains(card))
         {
-            // Print a helpful diagnostic of the currentCards contents
             string names = currentCards.Count == 0 ? "<empty>" :
                 string.Join(", ", currentCards.ConvertAll(c => c != null ? c.cardName : "<null>"));
             Debug.LogWarning($"[PlayerHand {GetInstanceID()}] PlayCardFromHand: card not found in currentCards. card='{card?.cardName}'. currentCards=[{names}]");
@@ -75,7 +77,6 @@ public class PlayerHand : MonoBehaviour
         currentCards.Remove(card);
         Debug.Log($"[PlayerHand {GetInstanceID()}] Removed card from currentCards. New count: {currentCards.Count}");
 
-        // Update game state (discard + execution)
         if (playerDeck == null)
             playerDeck = FindFirstObjectByType<PlayerDeck>();
 
@@ -94,8 +95,7 @@ public class PlayerHand : MonoBehaviour
 
         Debug.Log($"[PlayerHand {GetInstanceID()}] PlayCardFromHand finished. Cards remaining: {currentCards.Count}");
 
-        // NOTE: do NOT attempt to remove visuals here. Visual removal is handled by animation callbacks
-        // which will call handUI.RemoveCardObject(gameObject) to remove the exact GameObject instance.
+        // Visual removal is handled by CardUI animation callback (handUI.RemoveCardObject) — do not remove visuals here.
     }
 
     public void Add(CardData newCard)
@@ -105,7 +105,13 @@ public class PlayerHand : MonoBehaviour
 
         currentCards.Add(newCard);
 
-        handUI.AddCard(newCard);
+        if (handUI == null)
+            handUI = FindFirstObjectByType<PlayerHandUI>();
+
+        if (handUI != null)
+            handUI.AddCard(newCard);
+        else
+            Debug.LogWarning("PlayerHand.Add: handUI missing, visual not created.");
     }
 
     public void Remove(CardData card)
@@ -117,11 +123,9 @@ public class PlayerHand : MonoBehaviour
     {
         List<CardData> removed = DiscardAllInstant();
 
-        // Ensure we have a playerDeck reference
         if (playerDeck == null)
             playerDeck = FindFirstObjectByType<PlayerDeck>();
 
-        // Move them to the logical discard pile so game state is correct immediately
         if (playerDeck != null)
         {
             foreach (var c in removed)
@@ -132,12 +136,9 @@ public class PlayerHand : MonoBehaviour
             Debug.LogWarning("PlayerHand.DiscardHand: playerDeck is null; logical discard not updated.");
         }
 
-        // Ensure we have a handUI reference
         if (handUI == null)
             handUI = FindFirstObjectByType<PlayerHandUI>();
 
-        // Start the existing UI coroutine to animate cards moving to the discard pile.
-        // IMPORTANT: start it as a coroutine so the UI animation actually runs.
         if (handUI != null)
         {
             StartCoroutine(handUI.DiscardCardsAnimated());
@@ -157,8 +158,7 @@ public class PlayerHand : MonoBehaviour
 
     public void DrawToStartingHandSize()
     {
-        int safety = 20;
-
+        int safety = 50;
         while (currentCards.Count < startingHandSize && safety-- > 0)
         {
             DrawCard();
