@@ -124,13 +124,15 @@ public class PlayerHand : MonoBehaviour
     {
         List<CardData> removed = new List<CardData>(currentCards);
         currentCards.Clear();
+        handUI.isDiscarding = false;
         return removed;
     }
 
     public void DrawToStartingHandSize()
     {
-        Debug.Log("dra");
+        Debug.Log(handUI.isDiscarding);
         int safety = 50;
+
         while (currentCards.Count < startingHandSize && safety-- > 0)
         {
             DrawCard();

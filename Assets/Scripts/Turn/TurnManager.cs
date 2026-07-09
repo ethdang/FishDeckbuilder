@@ -35,10 +35,10 @@ public class TurnManager : MonoBehaviour
 
         int safety = 0;
 
-        while (handUI.isDiscarding && safety <= 50)
+        while (handUI.isDiscarding && safety <= 100)
         {
             safety++;
-            yield return null;   
+            yield return new WaitForEndOfFrame();   
         }
 
         playerHand.DrawToStartingHandSize();

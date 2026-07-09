@@ -170,6 +170,7 @@ public class PlayerHandUI : MonoBehaviour
             yield return new WaitForSeconds(0.05f);
         }
 
+        playerHand.DiscardAllInstant();
         isDiscarding = false;
     }
 

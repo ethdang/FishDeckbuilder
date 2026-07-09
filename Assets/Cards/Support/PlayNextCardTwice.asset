@@ -14,10 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: Encore
   description: the next card you play will be played twice
+  category: 0
   cost: 2
   effects:
-  - ability: 0
-    amount: 0
-    targetCategory: 0
-    targetDeck: 0
-    turnDelay: 0
+  - {fileID: 11400000, guid: e65fae681d8b640938cd268f216a7b58, type: 2}
