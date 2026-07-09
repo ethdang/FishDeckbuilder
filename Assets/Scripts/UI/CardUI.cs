@@ -2,7 +2,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
-using System;
 
 public class CardUI : MonoBehaviour,
     IPointerEnterHandler,
@@ -63,13 +62,18 @@ public class CardUI : MonoBehaviour,
         if (descriptionText != null)
             descriptionText.text = card.description;
 
-        // Make sure initial targets reflect the current transform to avoid jumps.
         if (rectTransform != null)
         {
             TargetPosition = rectTransform.anchoredPosition;
             TargetRotation = rectTransform.localRotation;
             TargetScale = rectTransform.localScale;
         }
+
+        // Ensure interactive
+        CanvasGroup cg = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = 1f;
+        cg.interactable = true;
+        cg.blocksRaycasts = true;
     }
 
     void Awake()
@@ -77,7 +81,6 @@ public class CardUI : MonoBehaviour,
         cardActionAnimation = GetComponent<CardActionAnimation>();
         rectTransform = GetComponent<RectTransform>();
 
-        // Initialize smoothing targets so LateUpdate has sane values from the start.
         if (rectTransform != null)
         {
             TargetPosition = rectTransform.anchoredPosition;
@@ -90,9 +93,6 @@ public class CardUI : MonoBehaviour,
         playerResource = FindFirstObjectByType<PlayerResource>();
         cardManager = FindFirstObjectByType<CardManager>();
         playerHand = FindFirstObjectByType<PlayerHand>();
-
-        if (cardActionAnimation == null)
-            Debug.LogWarning("CardUI: CardActionAnimation component is missing on prefab.", this);
 
         if (transform.parent != null)
             handParentRect = transform.parent as RectTransform;
@@ -139,7 +139,6 @@ public class CardUI : MonoBehaviour,
             return;
         }
 
-        // Single writer for the transform: CardUI uses Target* to smooth motion.
         rectTransform.anchoredPosition = Vector2.Lerp(
             rectTransform.anchoredPosition,
             TargetPosition,
@@ -234,7 +233,6 @@ public class CardUI : MonoBehaviour,
         {
             if (cardActionAnimation == null)
             {
-                Debug.LogError("CardUI.OnEndDrag: CardActionAnimation component missing.", this);
                 IsDragging = false;
                 return;
             }
@@ -243,62 +241,35 @@ public class CardUI : MonoBehaviour,
             IsDragging = false;
             IsHovered = false;
 
-            // Capture local references for the callback closure to avoid relying on fields that may change.
+            // Capture locals
             CardData localCard = cardData;
             PlayerHand localPlayerHand = playerHand != null ? playerHand : FindFirstObjectByType<PlayerHand>();
             PlayerHandUI localHandUI = handUI != null ? handUI : FindFirstObjectByType<PlayerHandUI>();
             GameObject visualObject = this.gameObject;
             RectTransform animationParent = handParentRect != null ? handParentRect : (rectTransform.parent as RectTransform);
 
-            // Start the animation; when it finishes, update game logic and remove the visual by reference.
+            // Start animation and handle completion
             StartCoroutine(cardActionAnimation.AnimateTo(
                 animationParent,
                 playAnimationTarget,
                 () =>
                 {
-                    try
+                    // Update game logic
+                    if (localPlayerHand != null)
+                        localPlayerHand.PlayCardFromHand(localCard);
+
+                    // Remove the visual from the hand UI by reference
+                    if (localHandUI != null)
                     {
-                        Debug.Log($"[CardUI] Animation finished for '{localCard?.cardName}' on object {visualObject.GetInstanceID()}");
-
-                        // Update logical game state (removes from currentCards, adds to discard, executes card)
-                        if (localPlayerHand != null)
-                        {
-                            localPlayerHand.PlayCardFromHand(localCard);
-                        }
-                        else
-                        {
-                            Debug.LogError("CardUI: playerHand is null in animation callback.", this);
-                        }
-
-                        // Remove the exact visual object from the hand UI (safe by-reference removal)
-                        if (localHandUI != null)
-                        {
-                            localHandUI.RemoveCardObject(visualObject);
-                        }
-                        else
-                        {
-                            // Fallback: destroy the visual if UI manager is missing
-                            Destroy(visualObject);
-                            Debug.LogWarning("CardUI: handUI is null in animation callback — destroyed visual object as fallback.", this);
-                        }
+                        localHandUI.RemoveCardObject(visualObject);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Debug.LogError($"CardUI: Exception in animation callback: {ex}", this);
-                        // Ensure we don't leave the visual orphaned
-                        if (visualObject != null)
-                            Destroy(visualObject);
+                        Destroy(visualObject);
                     }
                 }));
 
             return;
-        }
-        else
-        {
-            if (!overPlayZone)
-                Debug.Log("CardUI.OnEndDrag: not over play zone");
-            else
-                Debug.Log("CardUI.OnEndDrag: cannot afford / cannot execute card");
         }
 
         IsDragging = false;
@@ -321,6 +292,7 @@ public class CardUI : MonoBehaviour,
         );
     }
 
+    // Called by Reveal flow when we reparent the visual into the hand to update drag parent reference
     public void RefreshHandParentRect(RectTransform newParent)
     {
         handParentRect = newParent;
