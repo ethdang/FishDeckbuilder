@@ -32,8 +32,6 @@ public class PlayerHandUI : MonoBehaviour
     [SerializeField] private float revealStagger = 0.12f; // time between sequential reveals
     [SerializeField] private float revealHold = 0.35f; // base hold at play target (will be scaled by revealTimeScale)
     [SerializeField] private float revealFlipDuration = 0.16f; // base flip time (scaled by revealTimeScale)
-    
-    [SerializeField] private float discardStartStagger = 0.06f;
 
     [Header("Control & Buffer")]
     [Tooltip("Time to wait AFTER discard animations finish and BEFORE drawing starts.")]
@@ -131,32 +129,22 @@ public class PlayerHandUI : MonoBehaviour
         LayoutCards(false);
     }
 
+    // Discard: wait sequentially for each card's animation to finish (deterministic) and add to discard on completion.
     public IEnumerator DiscardCardsAnimated()
     {
-        if (activeObjects.Count == 0)
-            yield break;
-
         isDiscarding = true;
 
-        // Animation parent for consistency
         Canvas rootCanvas = objectParent != null ? objectParent.GetComponentInParent<Canvas>() : null;
         RectTransform animationParent = rootCanvas != null ? (rootCanvas.transform as RectTransform) : objectParent;
 
-        // Snapshot the objects we will animate
-        List<GameObject> objectsToProcess = new List<GameObject>(activeObjects);
-
-        // Clear activeObjects now to avoid layout fighting while animations run
-        activeObjects.Clear();
-
-        int remaining = objectsToProcess.Count;
-
-        // Start each discard animation with a stagger between starts
-        for (int i = 0; i < objectsToProcess.Count; i++)
+        while (activeObjects.Count > 0)
         {
-            GameObject obj = objectsToProcess[i];
+            GameObject obj = activeObjects[0];
+            activeObjects.RemoveAt(0);
+
             if (obj == null)
             {
-                remaining--;
+                yield return null;
                 continue;
             }
 
@@ -164,43 +152,39 @@ public class PlayerHandUI : MonoBehaviour
             if (ui != null)
                 ui.isAnimating = true;
 
-            CardActionAnimation anim = obj.GetComponent<CardActionAnimation>();
-            CardData cardData = ui != null ? ui.Card : null;
-
+            var anim = obj.GetComponent<CardActionAnimation>();
             if (anim != null)
             {
-                // set per-animation time scale
-                anim.timeScale = discardTimeScale;
+                // apply global revealTimeScale to discard animations as well so you can tune speed in one place
+                anim.timeScale = revealTimeScale;
 
-                // Start the discard animation and cleanup; decrement remaining in the completion callback
-                StartCoroutine(RunDiscardAnimAndCleanup(anim, animationParent, discardPile, obj, cardData, () =>
+                CardData cardData = ui != null ? ui.Card : null;
+                GameObject objToDestroy = obj;
+
+                // Wait for the animation to complete (sequential)
+                yield return StartCoroutine(anim.AnimateTo(animationParent, discardPile, () =>
                 {
-                    remaining--;
+                    if (cardData != null && playerDeck == null)
+                        playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+                    if (cardData != null && playerDeck != null)
+                        playerDeck.AddToDiscard(cardData);
+
+                    Destroy(objToDestroy);
                 }));
             }
             else
             {
-                // No animation: add to discard immediately and destroy
-                if (cardData != null && playerDeck == null)
-                    playerDeck = FindFirstObjectByType<PlayerDeck>();
-                if (cardData != null && playerDeck != null)
-                    playerDeck.AddToDiscard(cardData);
-
+                Debug.LogWarning("DiscardCardsAnimated: CardActionAnimation missing on card object.", obj);
                 Destroy(obj);
-                remaining--;
             }
 
-            // wait a little before starting the next card's animation
-            if (discardStartStagger > 0f)
-                yield return new WaitForSeconds(discardStartStagger);
+            yield return new WaitForSeconds(0.05f);
         }
 
-        // Wait until all started animations have finished
-        while (remaining > 0)
-            yield return null;
-
-        // small buffer so logic that depends on discard finishing has a stable moment
-        yield return null;
+        // Ensure logical hand is cleared (defensive)
+        if (playerHand != null)
+            playerHand.DiscardAllInstant();
 
         isDiscarding = false;
     }
