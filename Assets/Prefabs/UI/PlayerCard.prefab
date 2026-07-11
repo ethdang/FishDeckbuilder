@@ -347,6 +347,7 @@ MonoBehaviour:
   TargetPosition: {x: 0, y: 0}
   TargetRotation: {x: 0, y: 0, z: 0, w: 0}
   TargetScale: {x: 1, y: 1, z: 1}
+  isAnimating: 0
 --- !u!114 &5526362557137426913
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -363,6 +364,7 @@ MonoBehaviour:
   holdDuration: 0.35
   fadeDuration: 0.2
   enlargedScale: 1.35
+  timeScale: 1
 --- !u!114 &5346315049611418294
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -418,7 +420,7 @@ MonoBehaviour:
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_DisabledColor: {r: 1, g: 1, b: 1, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:

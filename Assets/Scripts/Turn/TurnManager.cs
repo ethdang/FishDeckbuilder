@@ -27,20 +27,25 @@ public class TurnManager : MonoBehaviour
 
     public void EndTurn()
     {
-        if (isEndingTurn) return;
+        Debug.Log($"EndTurn called. isEndingTurn={isEndingTurn} frame={Time.frameCount} instance={GetInstanceID()}");
+
+        if (isEndingTurn)
+            return;
+
         isEndingTurn = true;
         StartCoroutine(EndTurnRoutine());
     }
 
-
     private IEnumerator EndTurnRoutine()
     {
-        // Wait for discard animation coroutine to finish before drawing
         if (handUI != null)
         {
-            yield return StartCoroutine(handUI.DiscardCardsAnimated());
+            yield return StartCoroutine(handUI.DiscardCardsAnimated());   
         }
+
         playerHand.DrawToStartingHandSize();
+
+        yield return new WaitUntil(() => !handUI.isRevealing);
 
         cardManager.RemoveEndOfTurnModifiers();
 
@@ -57,6 +62,8 @@ public class TurnManager : MonoBehaviour
                 pendingEffects.RemoveAt(i);
             }
         }
+
+        isEndingTurn = false;
     }
 
     public void Reset()

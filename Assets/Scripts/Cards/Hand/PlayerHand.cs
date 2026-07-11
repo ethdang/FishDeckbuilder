@@ -97,41 +97,53 @@ public class PlayerHand : MonoBehaviour
         currentCards.Remove(card);
     }
 
-    public void DiscardHand()
-    {
-        List<CardData> removed = DiscardAllInstant();
+    // public void DiscardHand()
+    // {
+    //     List<CardData> removed = DiscardAllInstant();
 
-        if (playerDeck == null)
-            playerDeck = FindFirstObjectByType<PlayerDeck>();
+    //     if (playerDeck == null)
+    //         playerDeck = FindFirstObjectByType<PlayerDeck>();
 
-        if (playerDeck != null)
-        {
-            foreach (var c in removed)
-                playerDeck.AddToDiscard(c);
-        }
+    //     if (playerDeck != null)
+    //     {
+    //         foreach (var c in removed)
+    //             playerDeck.AddToDiscard(c);
+    //     }
 
-        if (handUI == null)
-            handUI = FindFirstObjectByType<PlayerHandUI>();
+    //     if (handUI == null)
+    //         handUI = FindFirstObjectByType<PlayerHandUI>();
 
-        if (handUI != null)
-        {
-            StartCoroutine(handUI.DiscardCardsAnimated());
-        }
+    //     if (handUI != null)
+    //     {
+    //         StartCoroutine(handUI.DiscardCardsAnimated());
+    //     }
 
-    }
+    // }
 
-    public List<CardData> DiscardAllInstant()
+    public List<CardData> DiscardHand(bool addToDiscard = false)
     {
         List<CardData> removed = new List<CardData>(currentCards);
         currentCards.Clear();
-        handUI.isDiscarding = false;
+
+        if (addToDiscard)
+        {
+            if (playerDeck == null)
+                playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+            if (playerDeck != null)
+            {
+                foreach (var c in removed)
+                    playerDeck.AddToDiscard(c);
+            }
+        }
+
         return removed;
     }
 
     public void DrawToStartingHandSize()
     {
-        Debug.Log(handUI.isDiscarding);
-        int safety = 20;
+        // Debug.Log(currentCards.Count);
+        int safety = 50;
 
         while (currentCards.Count < startingHandSize && safety-- > 0)
         {
