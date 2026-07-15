@@ -24,6 +24,11 @@ public abstract class CardModifier : CardEffect
     {
         return amount;
     }
+
+    public virtual int ModifyFishingStrength(int amount)
+    {
+        return amount;
+    }
 }
 public enum ModifierDuration
 {

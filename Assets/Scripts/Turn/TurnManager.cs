@@ -27,8 +27,6 @@ public class TurnManager : MonoBehaviour
 
     public void EndTurn()
     {
-        Debug.Log($"EndTurn called. isEndingTurn={isEndingTurn} frame={Time.frameCount} instance={GetInstanceID()}");
-
         if (isEndingTurn)
             return;
 

@@ -226,7 +226,7 @@ public class CardUI : MonoBehaviour,
         if (!IsDragging)
             return;
 
-        bool canExecute = (cardManager != null && cardManager.CanExecute(cardData));
+        bool canExecute = cardManager != null && cardManager.CanExecute(cardData);
         bool overPlayZone = IsOverPlayZone(eventData);
 
         if (overPlayZone && canExecute)

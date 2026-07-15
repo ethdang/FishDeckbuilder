@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 public class CardManager : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class CardManager : MonoBehaviour
 
     private EncounterDeck encounterDeck;
     private PlayerDeck playerDeck;
+    private PlayerHand playerHand;
     private EncounterRevealArea revealArea;
     private PlayerResource playerResource;
     private TurnManager turnManager;
@@ -18,6 +20,7 @@ public class CardManager : MonoBehaviour
     {
         encounterDeck = FindFirstObjectByType<EncounterDeck>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
+        playerHand = FindFirstObjectByType<PlayerHand>();
         revealArea = FindFirstObjectByType<EncounterRevealArea>();
         playerResource = FindFirstObjectByType<PlayerResource>();
         turnManager = FindFirstObjectByType<TurnManager>();
@@ -47,7 +50,6 @@ public class CardManager : MonoBehaviour
 
             if (modifier.duration == ModifierDuration.NextCard)
                 usedModifiers.Add(modifier);
-
         }
 
         playerResource.SpendFocus(cost);
@@ -67,11 +69,18 @@ public class CardManager : MonoBehaviour
 
             for (int i = 0; i < playCount; i++)
             {
-                effect.Execute(contextManager.GetContext());
+                StartCoroutine(DelayEffect(effect));
             }
 
             LogEffect(effect);
         }
+    }
+
+    public IEnumerator DelayEffect(CardEffect effect)
+    {
+        yield return new WaitForSeconds(0.05f);
+
+        effect.Execute(contextManager.GetContext());
     }
 
     public void RemoveEndOfTurnModifiers()
@@ -80,9 +89,14 @@ public class CardManager : MonoBehaviour
             modifier => modifier.duration == ModifierDuration.EndOfTurn);
     }
 
+    public void RemoveModifier(CardModifier remove)
+    {
+        modifiers.Remove(remove);
+    }
+
     public bool CanExecute(CardData card)
     {
-        return playerResource.CanAfford(card.cost); // Later on can add "locked" effects to certain cards due to boss effects from legendary fishes
+        return playerResource.CanAfford(card.cost) || !playerHand.isPlayingCard; // Later on can add "locked" effects to certain cards due to boss effects from legendary fishes
     }
 
     public void Queue(CardEffect effect)
@@ -99,57 +113,5 @@ public class CardManager : MonoBehaviour
     {
         turnEffect.Add(effect);
         allEffect.Add(effect);
-    }
-
-    private void DrawCards(int amount)
-    {
-        List<EncounterCardData> cards = new();
-
-        for (int i = 0; i < amount; i++)
-        {
-            EncounterCardData card = encounterDeck.DrawCard();
-
-            if (card == null)
-                break;
-
-            cards.Add(card);
-        }
-
-        StartCoroutine(revealArea.RevealCards(cards));
-    }
-
-    private void Shuffle(DeckType deck)
-    {
-        switch (deck)
-        {
-            case DeckType.Encounter:
-                encounterDeck.ShuffleDeck();
-                break;
-            case DeckType.Player:
-                playerDeck.ShuffleDeck();
-                break;
-        }
-    }
-
-    private void DrawUntil(CardCategory type)
-    {
-        List<EncounterCardData> cards = new();
-
-        int safety = 50;
-
-        while (safety-- > 0)
-        {
-            EncounterCardData card = encounterDeck.DrawCard();
-
-            if (card == null)
-                break;
-
-            cards.Add(card);
-
-            if (card.category == type)
-                break;
-        }
-
-        StartCoroutine(revealArea.RevealCards(cards));
     }
 }

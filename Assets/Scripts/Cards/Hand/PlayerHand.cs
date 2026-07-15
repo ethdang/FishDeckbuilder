@@ -9,6 +9,7 @@ public class PlayerHand : MonoBehaviour
 
     public int startingHandSize = 5;
     public int handLimit = int.MaxValue;
+    public bool isPlayingCard = false;
 
     private CardManager cardManager;
     private PlayerDeck playerDeck;
@@ -63,6 +64,10 @@ public class PlayerHand : MonoBehaviour
 
     public void PlayCardFromHand(CardData card)
     {
+        if (isPlayingCard) return;
+
+        isPlayingCard = true;
+
         currentCards.Remove(card);
 
         if (playerDeck == null)
@@ -76,6 +81,8 @@ public class PlayerHand : MonoBehaviour
 
         if (cardManager != null)
             cardManager.PlayCard(card);
+
+        isPlayingCard = false;
     }
 
     public void Add(CardData newCard)

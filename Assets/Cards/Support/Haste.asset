@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2decfc3fdc36641768fe0943ea43b9ed, type: 3}
-  m_Name: PlayNextCardTwice
+  m_Name: Haste
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  cardName: Encore
-  description: the next card you play will be played twice
+  cardName: Haste
+  description: 'reduce the delay of all pending cards by 1 turn '
   category: 0
-  cost: 2
+  cost: 1
   effects:
-  - {fileID: 11400000, guid: e65fae681d8b640938cd268f216a7b58, type: 2}
+  - {fileID: 11400000, guid: d99899887af3f49849ac2a304e9e7fbd, type: 2}
