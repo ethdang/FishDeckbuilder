@@ -52,6 +52,9 @@ public class PlayerHandUI : MonoBehaviour
     {
         playerHand = FindFirstObjectByType<PlayerHand>();
         playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+        currentTotalFanAngle = minTotalFanAngle;
+        currentRadius = minRadius;
     }
 
     public void AddCard(CardData card)
@@ -61,6 +64,8 @@ public class PlayerHandUI : MonoBehaviour
             Debug.LogError("PlayerHandUI.AddCard: cardPrefab or objectParent not assigned.");
             return;
         }
+
+        playerHand.canPlayCard = false;
 
         GameObject obj = Instantiate(cardPrefab, objectParent);
 
@@ -80,11 +85,15 @@ public class PlayerHandUI : MonoBehaviour
 
         activeObjects.Add(obj);
 
+        playerHand.canPlayCard = true;
+
         LayoutCards(false);
     }
 
     public void RemoveCard(CardData card)
     {
+        playerHand.canPlayCard = false;
+
         for (int i = activeObjects.Count - 1; i >= 0; i--)
         {
             GameObject go = activeObjects[i];
@@ -103,6 +112,8 @@ public class PlayerHandUI : MonoBehaviour
                 return;
             }
         }
+
+        playerHand.canPlayCard = true;
     }
 
     public void RemoveCardObject(GameObject cardObject)
@@ -125,10 +136,8 @@ public class PlayerHandUI : MonoBehaviour
             return;
 
         LayoutCards(false);
+        UpdateCanPlayState();
     }
-
-    // inside PlayerHandUI.cs - Replace the body of DiscardCardsAnimated() with this:
-
     public IEnumerator DiscardCardsAnimated()
     {
         isDiscarding = true;
@@ -309,7 +318,7 @@ public class PlayerHandUI : MonoBehaviour
 
         // Determine play-zone center local position (fallback to deckWorldPos)
         Vector2 playLocal;
-        PlayZone playZone = FindFirstObjectByType<PlayZone>();
+        PlayZoneUI playZone = FindFirstObjectByType<PlayZoneUI>();
         RectTransform playTarget = (playZone != null && playZone.transform.childCount > 0)
             ? playZone.transform.GetChild(0).GetComponent<RectTransform>()
             : null;
@@ -449,14 +458,12 @@ public class PlayerHandUI : MonoBehaviour
         return rt;
     }
 
-    public void LayoutCards(bool snap = false)
+    private void UpdateFanLayout()
     {
         if (isDiscarding) return;
 
         int count = activeObjects.Count;
-
-        if (count == 0)
-            return;
+        if (count == 0) return;
 
         int hoveredIndex = -1;
         float hoveredProgress = 0f;
@@ -464,16 +471,11 @@ public class PlayerHandUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             GameObject cardObject = activeObjects[i];
-            if (cardObject == null)
-                continue;
+            if (cardObject == null) continue;
 
             CardUI ui = cardObject.GetComponent<CardUI>();
-
-            if (ui == null)
-                continue;
-
-            if (ui.IsDragging || ui.isAnimating)
-                continue;
+            if (ui == null) continue;
+            if (ui.IsDragging || ui.isAnimating) continue;
         
             if (ui.HoverProgress > hoveredProgress)
             {
@@ -482,9 +484,49 @@ public class PlayerHandUI : MonoBehaviour
             }
         }
 
-        float countT = (count <= 1)
-            ? 0f
-            : Mathf.InverseLerp(1f, cardsForMaxAngle, count);
+        float countT = (count <= 1) ? 0f : Mathf.InverseLerp(1f, cardsForMaxAngle, count);
+
+        float targetTotalFanAngle =
+            Mathf.Lerp(minTotalFanAngle, maxTotalFanAngle, countT) +
+            hoveredProgress * hoverFanBoost;
+
+        float targetRadius =
+            Mathf.Lerp(minRadius, maxRadius, countT) +
+            hoveredProgress * hoverRadiusBoost;
+
+        // Smooth update every frame
+        float t = Time.deltaTime * layoutSmoothSpeed;
+        currentTotalFanAngle = Mathf.Lerp(currentTotalFanAngle, targetTotalFanAngle, t);
+        currentRadius = Mathf.Lerp(currentRadius, targetRadius, t);
+    }
+
+    public void LayoutCards(bool snap = false)
+    {
+        if (isDiscarding) return;
+
+        int count = activeObjects.Count;
+        if (count == 0) return;
+
+        int hoveredIndex = -1;
+        float hoveredProgress = 0f;
+
+        for (int i = 0; i < count; i++)
+        {
+            GameObject cardObject = activeObjects[i];
+            if (cardObject == null) continue;
+
+            CardUI ui = cardObject.GetComponent<CardUI>();
+            if (ui == null) continue;
+            if (ui.IsDragging || ui.isAnimating) continue;
+        
+            if (ui.HoverProgress > hoveredProgress)
+            {
+                hoveredProgress = ui.HoverProgress;
+                hoveredIndex = i;
+            }
+        }
+
+        float countT = (count <= 1) ? 0f : Mathf.InverseLerp(1f, cardsForMaxAngle, count);
 
         float targetTotalFanAngle =
             Mathf.Lerp(minTotalFanAngle, maxTotalFanAngle, countT) +
@@ -512,8 +554,7 @@ public class PlayerHandUI : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             GameObject cardObject = activeObjects[i];
-            if (cardObject == null)
-                continue;
+            if (cardObject == null) continue;
 
             RectTransform rect = cardObject.GetComponent<RectTransform>();
             CardUI ui = cardObject.GetComponent<CardUI>();
@@ -536,24 +577,13 @@ public class PlayerHandUI : MonoBehaviour
             );
 
             Quaternion targetRot = Quaternion.Euler(0f, 0f, -angle);
-
             Vector3 targetScale = Vector3.one * (1f + hover * hoverScaleBoost);
 
             if (ui != null)
             {
-                if (snap)
-                {
-                    ui.TargetPosition = targetPos;
-                    ui.TargetRotation = targetRot;
-                    ui.TargetScale = targetScale;
-                }
-                else
-                {
-                    float s = Time.deltaTime * layoutSmoothSpeed;
-                    rect.anchoredPosition = Vector2.Lerp(rect.anchoredPosition, targetPos, s);
-                    rect.localRotation = Quaternion.Slerp(rect.localRotation, targetRot, s);
-                    rect.localScale = Vector3.Lerp(rect.localScale, targetScale, s);
-                }
+                ui.TargetPosition = targetPos;
+                ui.TargetRotation = targetRot;
+                ui.TargetScale = targetScale;
             }
 
             rect.SetSiblingIndex(i);
@@ -563,5 +593,41 @@ public class PlayerHandUI : MonoBehaviour
         {
             activeObjects[hoveredIndex].transform.SetAsLastSibling();
         }
+    }
+
+        // Helper: update the hand's canPlayCard flag based on reveal/discard/animation state
+    private void UpdateCanPlayState()
+    {
+        if (playerHand == null)
+            playerHand = FindFirstObjectByType<PlayerHand>();
+
+        if (playerHand == null)
+            return;
+
+        // Any reveal/discard in progress blocks play
+        if (isRevealing || isDiscarding)
+        {
+            playerHand.canPlayCard = false;
+            return;
+        }
+
+        // Any active card visual currently animating blocks play
+        bool anyAnimating = false;
+        for (int i = 0; i < activeObjects.Count; i++)
+        {
+            GameObject go = activeObjects[i];
+            if (go == null) continue;
+            var ui = go.GetComponent<CardUI>();
+            if (ui != null && ui.isAnimating)
+            {
+                anyAnimating = true;
+                break;
+            }
+        }
+
+        // Also respect the logical isPlayingCard flag on PlayerHand (if used elsewhere)
+        bool handPlaying = playerHand.isPlayingCard;
+
+        playerHand.canPlayCard = !(anyAnimating || handPlaying);
     }
 }

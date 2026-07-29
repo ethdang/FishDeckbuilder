@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Meditate
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: Meditate
-  description: at the start of your next turn, draw 2 more cards from the player
-    deck
-  category: 0
+  description: next turn, draw 2 more cards
+  category: 4
   cost: 1
   effects:
-  - {fileID: 11400000, guid: baee2c88cc1d4415bb0eb5fed4236641, type: 2}
+  - {fileID: 11400000, guid: 657ab6cb64e954456ae5740851365d31, type: 2}
+  cardIcon: {fileID: 0}

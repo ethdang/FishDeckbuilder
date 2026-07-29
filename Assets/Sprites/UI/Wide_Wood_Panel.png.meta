@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 02c44fcdf77a14bc2992b807ded48efe
+guid: 167515e604d384762a8737557a11c704
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6138653979032816580
-    second: orange_flipper_fish_0
+      213: -358478211178816418
+    second: Wide_Wood_Panel_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: orange_flipper_fish_0
+      name: Wide_Wood_Panel_0
       rect:
         serializedVersion: 2
-        x: 22
-        y: 46
-        width: 90
-        height: 50
+        x: 35
+        y: 0
+        width: 1978
+        height: 1005
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c34f5b4eabe1fcaa0800000000000000
-      internalID: -6138653979032816580
+      spriteID: e5c18fa57fd660bf0800000000000000
+      internalID: -358478211178816418
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      orange_flipper_fish_0: -6138653979032816580
+      Wide_Wood_Panel_0: -358478211178816418
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

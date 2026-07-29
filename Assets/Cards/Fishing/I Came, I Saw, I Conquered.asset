@@ -13,8 +13,7 @@ MonoBehaviour:
   m_Name: I Came, I Saw, I Conquered
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: I Came, I Saw, I Conquered
-  description: reveal 1 card, then 2 cards, then 3 cards from the encounter deck
-    seperately, each on consecutive turns
+  description: reveal 1, then 2, then 3 encounter cards over the next 3 turns
   category: 2
   cost: 3
   effects:

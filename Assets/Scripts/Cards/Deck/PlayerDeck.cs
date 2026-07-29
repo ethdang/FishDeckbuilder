@@ -6,7 +6,14 @@ public class PlayerDeck : MonoBehaviour
     public List<CardData> drawPile = new();
     public List<CardData> discardPile = new();
 
-    public CardData DrawCard()
+    private PlayerHandUI handUI;
+
+    void Awake()
+    {
+        handUI = FindAnyObjectByType<PlayerHandUI>();
+    }
+
+    public CardData DrawCard(bool updateVisual = false)
     {
         if (drawPile.Count == 0)
         {
@@ -15,6 +22,9 @@ public class PlayerDeck : MonoBehaviour
         }
 
         CardData drawnCard = drawPile[0];
+
+        if (updateVisual)
+            handUI.EnqueueReveal(drawnCard);
 
         drawPile.RemoveAt(0);
 

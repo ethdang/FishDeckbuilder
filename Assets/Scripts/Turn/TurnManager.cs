@@ -15,6 +15,9 @@ public class TurnManager : MonoBehaviour
     private PlayerDeck playerDeck;
     private CardManager cardManager;
     private ContextManager contextManager;
+    private PlayerResource playerResource;
+    private PlayZoneUI playZone;
+    private FishManager fishManager;
 
     void Awake()
     {
@@ -23,6 +26,15 @@ public class TurnManager : MonoBehaviour
         playerDeck = FindFirstObjectByType<PlayerDeck>();
         cardManager = FindFirstObjectByType<CardManager>();
         contextManager = FindFirstObjectByType<ContextManager>();
+        playerResource = FindFirstObjectByType<PlayerResource>();
+        playZone = FindFirstObjectByType<PlayZoneUI>();
+        fishManager = FindFirstObjectByType<FishManager>();
+    }
+
+    void Start()
+    {
+        playerDeck.ShuffleDeck();
+        Reset();
     }
 
     public void EndTurn()
@@ -40,6 +52,8 @@ public class TurnManager : MonoBehaviour
         {
             yield return StartCoroutine(handUI.DiscardCardsAnimated());   
         }
+
+        playerResource.RestoreToMaxFocus();
 
         playerHand.DrawToStartingHandSize();
 
@@ -61,12 +75,26 @@ public class TurnManager : MonoBehaviour
             }
         }
 
+        FishData activeFish = fishManager.activeFish;
+
+        if (activeFish != null)
+        {
+            activeFish.fishTurnDuration -= 1; // add modifiers that are able to affect this number too
+
+            playZone.UpdateFishDurationIcons(activeFish.fishTurnDuration);        
+
+            // if (activeFish.fishTurnDuration == 0)
+                // fishManager.
+        }
+
         isEndingTurn = false;
     }
 
     public void Reset()
     {
         turn = 1;
+        playerResource.ResetStrength();
+        EndTurn();
     }
 }
 

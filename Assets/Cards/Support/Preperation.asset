@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: Preperation
   description: the next card you play costs 0 focus
-  category: 0
+  category: 4
   cost: 1
   effects:
   - {fileID: 11400000, guid: e641172ff0667427e852870fd24ffb12, type: 2}
+  cardIcon: {fileID: 0}

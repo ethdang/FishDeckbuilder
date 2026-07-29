@@ -9,4 +9,6 @@ public class FishData : ScriptableObject
     // public Rarities fishRarity; // make rarities once we decide on how much
     public int requiredStrength;
     public int fishTurnDuration;
+
+    [HideInInspector] public EncounterCardUI encounterFishCardUI;
 }

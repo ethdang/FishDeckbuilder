@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: Haste
   description: 'reduce the delay of all pending cards by 1 turn '
-  category: 0
+  category: 4
   cost: 1
   effects:
   - {fileID: 11400000, guid: d99899887af3f49849ac2a304e9e7fbd, type: 2}
+  cardIcon: {fileID: 0}

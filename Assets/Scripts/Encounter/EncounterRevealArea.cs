@@ -8,6 +8,9 @@ public class EncounterRevealArea : MonoBehaviour
     [SerializeField] private RectTransform uiParent;
     [SerializeField] private GameObject encounterCardPrefab;
     [SerializeField] private ScrollRect scrollRect;
+    [SerializeField] private RectTransform playZone;
+
+    [SerializeField] private float revealedFishDelay = 0.25f;
 
     [Header("Layout")]
     [SerializeField] private float verticalPadding = 200f;
@@ -16,6 +19,16 @@ public class EncounterRevealArea : MonoBehaviour
     [SerializeField] private RectTransform deckSpawnPoint;
 
     public List<EncounterCardUI> activeCards = new();
+
+    private Dictionary<FishData, EncounterCardUI> queuedFish = new();
+
+    private FishManager fishManager;
+
+    void Awake()
+    {
+        fishManager = FindFirstObjectByType<FishManager>();
+        playZone = FindFirstObjectByType<PlayZoneUI>().GetComponent<RectTransform>();
+    }
 
     public void RevealCard(EncounterCardData card)
     {
@@ -37,7 +50,7 @@ public class EncounterRevealArea : MonoBehaviour
         foreach (var card in cards)
         {
             GameObject obj = Instantiate(encounterCardPrefab, uiParent);
-
+            CardActionAnimation cardAnimation = obj.GetComponent<CardActionAnimation>();
             EncounterCardUI ui = obj.GetComponent<EncounterCardUI>();
 
             ui.Initialize(card, deckSpawnPoint);
@@ -50,7 +63,32 @@ public class EncounterRevealArea : MonoBehaviour
 
             // Wait until THIS card finishes before revealing the next.
             yield return new WaitUntil(() => ui.IsFinished);
+
+            if (card.category == CardCategory.Encounter_Fish)
+            {
+                queuedFish.Add(card.fishData, ui);
+                fishManager.RegisterFish(card.fishData);
+            }
         }
+    }
+
+    public IEnumerator MoveFishToPlayZone(FishData fish)
+    {
+        EncounterCardUI ui = queuedFish[fish];
+        CardActionAnimation animation = ui.GetComponent<CardActionAnimation>();
+
+        yield return new WaitForSeconds(revealedFishDelay);
+
+        activeCards.Remove(ui);
+        queuedFish.Remove(fish);
+
+        LayoutCards();
+
+        ui.transform.SetParent(playZone, true);
+
+        yield return StartCoroutine(animation.AnimateTo(playZone, playZone));
+        
+        Destroy(ui.gameObject);
     }
 
     public void RemoveCard(EncounterCardUI card)

@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CardData
   cardName: Focus
   description: gain 2 focus
-  category: 0
+  category: 4
   cost: 1
   effects:
   - {fileID: 11400000, guid: 3062e79cc797c409bba1ed5197faa597, type: 2}
+  cardIcon: {fileID: 0}

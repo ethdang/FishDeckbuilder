@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 public class FishManager : MonoBehaviour
 {
@@ -7,13 +8,21 @@ public class FishManager : MonoBehaviour
     public FishData activeFish;
 
     // private PlayerRod currentRod;
+    private bool isActivatingFish;
+
     private ActiveFishVisual fishVisual;
     private CardManager cardManager;
+    private EncounterRevealArea encounterRevealArea;
+    private PlayZoneUI playZoneUI;
+    private PlayerResource playerResource;
 
     void Awake()
     {
         cardManager = FindFirstObjectByType<CardManager>();
         fishVisual = FindFirstObjectByType<ActiveFishVisual>();
+        encounterRevealArea = FindFirstObjectByType<EncounterRevealArea>();
+        playZoneUI = FindFirstObjectByType<PlayZoneUI>();
+        playerResource = FindFirstObjectByType<PlayerResource>();
         // currentRod = FindFirstObjectByType<PlayerRod>();
     }
 
@@ -26,21 +35,49 @@ public class FishManager : MonoBehaviour
     {
         RegisterFish(fish);
         
-        if (waitingFish.Count == 0)
+        if (waitingFish.Count == 1)
         {
-            SetActiveFish(fish);
+            StartCoroutine(SetActiveFish());
         }
     }
 
-    public void RegisterFish(FishData newFish)
+    public void RegisterFish(FishData fish)
     {
-        waitingFish.Add(newFish);
+        waitingFish.Add(fish);
+
+        if (activeFish == null && !isActivatingFish)
+        {
+            StartCoroutine(SetActiveFish());
+        }
     }
 
-    public void SetActiveFish(FishData fish)
+    public void RemoveFish(FishData fish)
     {
+        if (fish == waitingFish[0])
+        {
+        //to do: make fish go to discard
+        }
+
+        waitingFish.Remove(fish);
+    }
+
+    private IEnumerator SetActiveFish()
+    {
+        isActivatingFish = true;
+
+        FishData fish = waitingFish[0];
+
+        yield return StartCoroutine(
+            encounterRevealArea.MoveFishToPlayZone(fish)
+        );
+
         activeFish = fish;
-        fishVisual.UpdateFish(fish);
+
+        fishVisual.ShowFish(fish);
+        playZoneUI.UpdateStrength(playerResource.FishingStrength);
+        playZoneUI.UpdateFishDurationIcons(fish.fishTurnDuration);
+
+        isActivatingFish = false;
     }
 
     public bool TryCatch(int fishingStrength)

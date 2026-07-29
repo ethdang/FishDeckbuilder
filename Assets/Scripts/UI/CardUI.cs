@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections;
+using UnityEngine.UI;
 
 public class CardUI : MonoBehaviour,
     IPointerEnterHandler,
@@ -10,20 +11,26 @@ public class CardUI : MonoBehaviour,
     IDragHandler,
     IEndDragHandler
 {
+    [Header("Card Visual")]
+    [SerializeField] private Color categoryColor;
+    [SerializeField] private Color patternColor;
+    [SerializeField] private Image cardFrame;
+    [SerializeField] private Image backgroundImage;
     [SerializeField] private TMP_Text cardNameText;
     [SerializeField] private TMP_Text descriptionText;
+    [SerializeField] private TMP_Text costText;
+    [SerializeField] private TMP_Text delayText;
 
     [Header("Hover")]
     [SerializeField] private float hoverSmoothSpeed = 12f;
 
     [Header("Animation")]
     [SerializeField] private float animationSpeed = 15f;
+    [SerializeField] private RectTransform playAnimationTarget;
 
     [Header("Drag")]
     [SerializeField] private float dragScaleBoost = 0.14f;
     [SerializeField] private float dragStraightenAmount = 0.75f;
-
-    [SerializeField] private RectTransform playAnimationTarget;
 
     public float HoverProgress { get; private set; }
     public bool IsHovered { get; private set; }
@@ -40,7 +47,7 @@ public class CardUI : MonoBehaviour,
     private CardActionAnimation cardActionAnimation;
     private PlayerHand playerHand;
     private PlayerHandUI handUI;
-    private PlayZone playZone;
+    private PlayZoneUI playZone;
     private PlayerResource playerResource;
     private CardManager cardManager;
 
@@ -61,6 +68,19 @@ public class CardUI : MonoBehaviour,
 
         if (descriptionText != null)
             descriptionText.text = card.description;
+        
+        if(costText != null)
+            costText.text = $"focus: {card.cost.ToString()}";
+
+        if(delayText != null)
+        {
+            CardEffect firstEffect = card.effects[0];
+
+            if (firstEffect.turnDelay > 0)
+                delayText.text = $"delay: {firstEffect.turnDelay.ToString()}";   
+            else
+                delayText.text = "no delay";
+        }
 
         if (rectTransform != null)
         {
@@ -89,7 +109,7 @@ public class CardUI : MonoBehaviour,
         }
 
         handUI = FindFirstObjectByType<PlayerHandUI>();
-        playZone = FindFirstObjectByType<PlayZone>();
+        playZone = FindFirstObjectByType<PlayZoneUI>();
         playerResource = FindFirstObjectByType<PlayerResource>();
         cardManager = FindFirstObjectByType<CardManager>();
         playerHand = FindFirstObjectByType<PlayerHand>();
@@ -99,6 +119,34 @@ public class CardUI : MonoBehaviour,
 
         if (playAnimationTarget == null && playZone != null && playZone.transform.childCount > 0)
             playAnimationTarget = playZone.transform.GetChild(0).GetComponent<RectTransform>();
+    }
+
+    void Start()
+    {
+        switch (cardData.category)
+        {
+            case CardCategory.Player_Fishing:
+                categoryColor = new Color32(49,156,113,255);
+                patternColor = new Color32(37,116,84,255);
+                break;
+            case CardCategory.Player_Cycle:
+                categoryColor = new Color32(58,113,212,255);
+                patternColor = new Color32(39,89,180,255);
+                break;
+            case CardCategory.Player_Support: 
+                categoryColor = new Color32(200,154,88,255);
+                patternColor = new Color32(153,111,51,255);
+                break;
+        }
+
+        cardFrame.color = categoryColor;
+
+        Material mat = Instantiate(backgroundImage.material);
+        backgroundImage.material = mat;
+
+        mat.SetTexture("_Pattern", cardData.cardIcon);
+        mat.SetColor("_PatternColor", patternColor);
+        
     }
 
     void Update()
@@ -157,7 +205,6 @@ public class CardUI : MonoBehaviour,
             t
         );
     }
-
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (IsDragging || isAnimating)
@@ -248,15 +295,32 @@ public class CardUI : MonoBehaviour,
             GameObject visualObject = this.gameObject;
             RectTransform animationParent = handParentRect != null ? handParentRect : (rectTransform.parent as RectTransform);
 
+            // Set the global playing flag on the hand BEFORE the animation starts so additional plays are blocked.
+            if (localPlayerHand != null)
+                localPlayerHand.canPlayCard = false;
+
             // Start animation and handle completion
             StartCoroutine(cardActionAnimation.AnimateTo(
                 animationParent,
                 playAnimationTarget,
                 () =>
                 {
-                    // Update game logic
+                    // After the animation completes, start the PlayCard coroutine on the PlayerHand
                     if (localPlayerHand != null)
-                        localPlayerHand.PlayCardFromHand(localCard);
+                    {
+                        // Start the coroutine on the PlayerHand so it can clear isPlayingCard when done
+                        localPlayerHand.StartCoroutine(localPlayerHand.PlayCardFromHandCoroutine(localCard));
+                    }
+                    else
+                    {
+                        // Fallback: call synchronous PlayCardFromHand (will not clear flag correctly)
+                        if (localHandUI != null)
+                        {
+                            PlayerHand ph = FindFirstObjectByType<PlayerHand>();
+                            if (ph != null)
+                                ph.PlayCardFromHand(localCard);
+                        }
+                    }
 
                     // Remove the visual from the hand UI by reference
                     if (localHandUI != null)

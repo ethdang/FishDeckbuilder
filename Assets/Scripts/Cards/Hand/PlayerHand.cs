@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Collections;
 
 public class PlayerHand : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class PlayerHand : MonoBehaviour
     public int startingHandSize = 5;
     public int handLimit = int.MaxValue;
     public bool isPlayingCard = false;
+    public bool canPlayCard = false;
 
     private CardManager cardManager;
     private PlayerDeck playerDeck;
@@ -36,10 +38,7 @@ public class PlayerHand : MonoBehaviour
         if (IsHandFull())
             return;
 
-        if (playerDeck == null)
-            playerDeck = FindFirstObjectByType<PlayerDeck>();
-
-        CardData drawnCard = playerDeck != null ? playerDeck.DrawCard() : null;
+        CardData drawnCard = playerDeck.DrawCard();
 
         if (drawnCard == null)
             return;
@@ -66,8 +65,6 @@ public class PlayerHand : MonoBehaviour
     {
         if (isPlayingCard) return;
 
-        isPlayingCard = true;
-
         currentCards.Remove(card);
 
         if (playerDeck == null)
@@ -81,7 +78,30 @@ public class PlayerHand : MonoBehaviour
 
         if (cardManager != null)
             cardManager.PlayCard(card);
+    }
 
+    public IEnumerator PlayCardFromHandCoroutine(CardData card)
+    {
+        // If cardManager isn't set, try to find it
+        if (cardManager == null)
+            cardManager = FindFirstObjectByType<CardManager>();
+
+        // Remove from logical hand immediately (same as PlayCardFromHand)
+        currentCards.Remove(card);
+
+        if (playerDeck == null)
+            playerDeck = FindFirstObjectByType<PlayerDeck>();
+
+        if (playerDeck != null)
+            playerDeck.AddToDiscard(card);
+
+        if (cardManager != null)
+        {
+            // Wait for the entire play routine (including DelayEffect coroutines) to complete.
+            yield return StartCoroutine(cardManager.PlayCardRoutine(card));
+        }
+
+        // Clear the playing lock now that all visual + effect work is done.
         isPlayingCard = false;
     }
 

@@ -8,6 +8,8 @@ public class CardManager : MonoBehaviour
     public List<CardEffect> allEffect = new List<CardEffect>(); // tracks all of the effects played in the encounter
     public List<CardModifier> modifiers = new List<CardModifier>();
 
+    public float effectPlayDelay = 0.5f;
+
     private EncounterDeck encounterDeck;
     private PlayerDeck playerDeck;
     private PlayerHand playerHand;
@@ -29,6 +31,18 @@ public class CardManager : MonoBehaviour
 
     public void PlayCard(CardData card)
     {
+        StartCoroutine(PlayCardRoutine(card));
+    }
+
+    public IEnumerator DelayEffect(CardEffect effect)
+    {
+        yield return new WaitForSeconds(effectPlayDelay);
+
+        effect.Execute(contextManager.GetContext());
+    }
+
+    public IEnumerator PlayCardRoutine(CardData card)
+    {
         int cost = card.cost;
         int playCount = 1;
 
@@ -44,43 +58,49 @@ public class CardManager : MonoBehaviour
             modifier.remainingUses--;
 
             if (modifier.remainingUses <= 0)
-            {
                 usedModifiers.Add(modifier);
-            }
 
             if (modifier.duration == ModifierDuration.NextCard)
                 usedModifiers.Add(modifier);
         }
 
-        playerResource.SpendFocus(cost);
+        // Spend cost immediately
+        playerResource?.SpendFocus(cost);
 
         foreach (CardModifier modifier in usedModifiers)
-        {
             modifiers.Remove(modifier);
-        }
+
+        // We'll track running delayed effect coroutines and wait until they all complete.
+        int running = 0;
 
         foreach (CardEffect effect in effects)
         {
             if (effect.turnDelay > 0)
             {
+                // delayed to future turn — queue it and don't run now
                 Queue(effect);
                 continue;
             }
 
             for (int i = 0; i < playCount; i++)
             {
-                StartCoroutine(DelayEffect(effect));
+                running++;
+                // Start a coroutine that runs DelayEffect (which waits then executes) and decrements 'running' when done.
+                StartCoroutine(RunEffectAndSignal(effect, () => running--));
             }
 
             LogEffect(effect);
         }
+
+        // Wait until all effect coroutines finish
+        yield return new WaitUntil(() => running == 0);
     }
 
-    public IEnumerator DelayEffect(CardEffect effect)
+    // Helper: runs DelayEffect(effect) and calls onDone when finished.
+    private IEnumerator RunEffectAndSignal(CardEffect effect, System.Action onDone)
     {
-        yield return new WaitForSeconds(0.05f);
-
-        effect.Execute(contextManager.GetContext());
+        yield return StartCoroutine(DelayEffect(effect));
+        onDone?.Invoke();
     }
 
     public void RemoveEndOfTurnModifiers()
@@ -96,8 +116,11 @@ public class CardManager : MonoBehaviour
 
     public bool CanExecute(CardData card)
     {
-        return playerResource.CanAfford(card.cost) || !playerHand.isPlayingCard; // Later on can add "locked" effects to certain cards due to boss effects from legendary fishes
-    }
+        // Only allow play when player can afford AND no card is currently being played.
+        bool canAfford = playerResource != null && playerResource.CanAfford(card.cost);
+        bool handNotPlaying = playerHand == null || !playerHand.isPlayingCard;
+        return canAfford && handNotPlaying && playerHand.canPlayCard;
+    } // Later on can add "locked" effects to certain cards due to boss effects from legendary fishes
 
     public void Queue(CardEffect effect)
     {

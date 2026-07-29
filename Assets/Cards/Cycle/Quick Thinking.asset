@@ -18,3 +18,4 @@ MonoBehaviour:
   cost: 1
   effects:
   - {fileID: 11400000, guid: baee2c88cc1d4415bb0eb5fed4236641, type: 2}
+  cardIcon: {fileID: 2800000, guid: 9fa32b706144d4ae0b1154073db37fd2, type: 3}

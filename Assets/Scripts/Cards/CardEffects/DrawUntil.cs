@@ -50,7 +50,7 @@ public class DrawUntil : CardEffect
 
         while (safety-- > 0)
         {
-            CardData card = context.playerDeck.DrawCard();
+            CardData card = context.playerDeck.DrawCard(true);
 
             if (card.category == targetCategory)
                 break;

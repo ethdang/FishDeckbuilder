@@ -10,6 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 226385b0d5ddb4bce8f14e781efbaa5c, type: 3}
-  m_Name: KillerfishData
+  m_Name: RedmouthData
   m_EditorClassIdentifier: Assembly-CSharp::FishData
-  fishName: Killerfish
+  fishName: Redmouth
+  fishSprite: {fileID: 21300000, guid: 7698a304652834486aae7c1bb049291d, type: 3}
+  requiredStrength: 5
+  fishTurnDuration: 5
+  encounterFishCardUI: {fileID: 0}

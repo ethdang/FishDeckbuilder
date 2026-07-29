@@ -9,6 +9,7 @@ public class CardData : ScriptableObject
     public CardCategory category;
     public int cost; // COST // ex. 1 focus
     public List<CardEffect> effects; // WHAT // which effects does this card have?
+    public Texture2D cardIcon;
 }
 
 public enum CardAbility
