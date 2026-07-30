@@ -18,4 +18,9 @@ public class ShuffleDeck : CardEffect
                 break;
         }
     }
+    
+    public override string ToString()
+    {
+        return $"Shuffle {targetDeck} Deck";
+    }
 }

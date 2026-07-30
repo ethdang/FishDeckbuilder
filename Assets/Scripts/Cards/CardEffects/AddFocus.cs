@@ -9,4 +9,9 @@ public class AddFocus : CardEffect
     {
         context.resource.AddFocus(amount);
     }
+
+    public override string ToString()
+    {
+        return $"{amount.ToString("+0;-0;0")} Focus";
+    }
 }

@@ -13,4 +13,9 @@ public class ReduceNextCardCost : CardModifier
     {
         return Mathf.Max(cost - reduceAmount, 0);
     }
+
+    public override string ToString()
+    {
+        return $"{reduceAmount.ToString("+0;-0;0")} Next Card Cost";
+    }
 }

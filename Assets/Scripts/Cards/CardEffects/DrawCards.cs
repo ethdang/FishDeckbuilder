@@ -40,4 +40,15 @@ public class DrawCards : CardEffect
         context.revealArea.StartCoroutine(
             context.revealArea.RevealCards(cards));
     }
+
+    public override string ToString()
+    {
+        if (targetDeck == DeckType.Encounter)
+            return $"Reveal {amount}";
+
+        if (targetDeck == DeckType.Player)
+            return $"Draw {amount}";
+
+        return $"Draw {amount}";
+    }
 }

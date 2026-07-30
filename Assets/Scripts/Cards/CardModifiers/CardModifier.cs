@@ -29,6 +29,7 @@ public abstract class CardModifier : CardEffect
     {
         return amount;
     }
+
 }
 public enum ModifierDuration
 {

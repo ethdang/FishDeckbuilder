@@ -10,4 +10,9 @@ public class IncreaseMaxFocus : CardEffect
     {
         context.resource.SetMaxFocus(context.resource.MaxFocus + amount);
     }
+
+    public override string ToString()
+    {
+        return $"{amount.ToString("+0;-0;0")} Max Focu";
+    }
 }

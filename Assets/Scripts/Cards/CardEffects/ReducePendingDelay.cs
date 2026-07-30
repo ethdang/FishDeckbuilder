@@ -13,4 +13,9 @@ public class ReducePendingDelay : CardEffect
             pending.turnsRemaining -= reduceAmount;
         }
     }
+
+    public override string ToString()
+    {
+        return $"{reduceAmount.ToString("+0;-0;0")} Pending Delay";
+    }
 }

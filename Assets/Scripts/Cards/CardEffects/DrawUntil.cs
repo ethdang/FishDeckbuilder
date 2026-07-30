@@ -21,6 +21,11 @@ public class DrawUntil : CardEffect
         }
     }
 
+    public override string ToString()
+    {
+        return $"Draw Until {targetCategory}";
+    }
+
     public void DrawUntilEncounterCards(CardContext context)
     {
             List<EncounterCardData> cards = new();

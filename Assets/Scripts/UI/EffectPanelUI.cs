@@ -25,7 +25,7 @@ public class EffectPanelUI : MonoBehaviour
         foreach (GameObject obj in activeUpcomingObjs)
             Destroy(obj);
 
-        activeCurrentObjs.Clear();
+        activeUpcomingObjs.Clear();
 
         foreach (PendingEffect effect in turnManager.pendingEffects)
         {

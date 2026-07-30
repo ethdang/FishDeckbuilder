@@ -13,4 +13,9 @@ public class PlayNextCardTwice : CardModifier
     {
         return playCount + 1;
     }
+
+    public override string ToString()
+    {
+        return "Double Next Card";
+    }
 }
