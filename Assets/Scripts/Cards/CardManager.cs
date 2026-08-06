@@ -17,6 +17,7 @@ public class CardManager : MonoBehaviour
     private PlayerResource playerResource;
     private TurnManager turnManager;
     private ContextManager contextManager;
+    private EffectPanelUI effectPanelUI;
 
     void Awake()
     {
@@ -27,6 +28,7 @@ public class CardManager : MonoBehaviour
         playerResource = FindFirstObjectByType<PlayerResource>();
         turnManager = FindFirstObjectByType<TurnManager>();
         contextManager = FindFirstObjectByType<ContextManager>();
+        effectPanelUI = FindFirstObjectByType<EffectPanelUI>();
     }
 
     public void PlayCard(CardData card)
@@ -94,6 +96,9 @@ public class CardManager : MonoBehaviour
 
         // Wait until all effect coroutines finish
         yield return new WaitUntil(() => running == 0);
+
+        effectPanelUI.UpdateUpcomingEffects();
+        effectPanelUI.UpdateCurrentEffects();
     }
 
     // Helper: runs DelayEffect(effect) and calls onDone when finished.
@@ -107,11 +112,14 @@ public class CardManager : MonoBehaviour
     {
         modifiers.RemoveAll(
             modifier => modifier.duration == ModifierDuration.EndOfTurn);
+
+        effectPanelUI?.UpdateCurrentEffects();
     }
 
     public void RemoveModifier(CardModifier remove)
     {
         modifiers.Remove(remove);
+        effectPanelUI?.UpdateCurrentEffects();
     }
 
     public bool CanExecute(CardData card)

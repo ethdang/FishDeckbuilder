@@ -18,6 +18,7 @@ public class TurnManager : MonoBehaviour
     private PlayerResource playerResource;
     private PlayZoneUI playZone;
     private FishManager fishManager;
+    private EffectPanelUI effectPanelUI;
 
     void Awake()
     {
@@ -29,6 +30,7 @@ public class TurnManager : MonoBehaviour
         playerResource = FindFirstObjectByType<PlayerResource>();
         playZone = FindFirstObjectByType<PlayZoneUI>();
         fishManager = FindFirstObjectByType<FishManager>();
+        effectPanelUI = FindFirstObjectByType<EffectPanelUI>();
     }
 
     void Start()
@@ -86,6 +88,8 @@ public class TurnManager : MonoBehaviour
             // if (activeFish.fishTurnDuration == 0)
                 // fishManager.
         }
+
+        effectPanelUI.UpdateUpcomingEffects();
 
         isEndingTurn = false;
     }

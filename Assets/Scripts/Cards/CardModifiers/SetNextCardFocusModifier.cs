@@ -15,6 +15,6 @@ public class SetNextCardFocusModifier : CardModifier
     }
     public override string ToString()
     {
-        return $"{newCost.ToString("+0;-0;0")} Next Card Cost";
+        return $"Next Cost: {newCost}";
     }
 }

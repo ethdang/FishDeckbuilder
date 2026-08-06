@@ -42,6 +42,13 @@ public class PlayerResource : MonoBehaviour
         playZoneUI.UpdateStrength(FishingStrength);
     }
 
+    public void SetStrength(int amount)
+    {
+        FishingStrength = amount;
+
+        playZoneUI.UpdateStrength(FishingStrength);
+    }
+
     public void ResetStrength()
     {
         FishingStrength = 0;

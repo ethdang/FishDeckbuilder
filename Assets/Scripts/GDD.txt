@@ -1,0 +1,610 @@
+# Fish the Fisher
+
+## Game Design & Technical Document
+
+**Version:** 2.0
+**Last Updated:** July 2026
+
+---
+
+# Project Overview
+
+Fish the Fisher is a turn-based deckbuilding roguelite centered around strategic fishing instead of combat.
+
+Rather than fighting enemies, the player manipulates the lake, reveals encounters, manages delayed effects, builds Fishing Strength, and catches increasingly valuable fish.
+
+The game aims to combine the long-term planning of Slay the Spire with the relaxing theme of fishing while creating its own unique identity.
+
+The project is being developed in Unity using URP.
+
+---
+
+# Core Design Philosophy
+
+The game should reward planning over reaction.
+
+Most mechanics should be deterministic.
+
+The player should feel clever because they prepared several turns ahead rather than because they got lucky.
+
+Information should be visible whenever possible.
+
+The UI should communicate game state instead of forcing the player to memorize it.
+
+Complexity should emerge from combinations between simple cards.
+
+---
+
+# Gameplay Loop
+
+During an encounter:
+
+1. Reveal encounter cards.
+2. Fish are added to the queue.
+3. The first queued fish becomes Active.
+4. Player spends Focus to play cards.
+5. Cards manipulate:
+
+   * Fishing Strength
+   * Focus
+   * Encounter Deck
+   * Player Deck
+   * Delayed Effects
+   * Fish
+6. End Turn.
+7. Delayed effects activate.
+8. Fish durations decrease.
+9. Player catches fish before they escape.
+
+---
+
+# Core Resources
+
+## Focus
+
+Primary resource.
+
+Used for playing cards.
+
+Resets every turn.
+
+Can increase Maximum Focus.
+
+Current Focus and Maximum Focus are tracked separately.
+
+---
+
+## Fishing Strength
+
+Represents the player's current ability to catch fish.
+
+Compared against the Active Fish's required strength.
+
+Many cards temporarily modify Fishing Strength.
+
+---
+
+# Fish
+
+Fish replace enemies.
+
+Every fish contains:
+
+* Name
+* Sprite
+* Required Fishing Strength
+* Duration
+* Reward
+* Passive Ability (optional)
+
+Fish are objectives rather than opponents.
+
+---
+
+# Fish Passives
+
+Some fish may have passive abilities that modify the encounter while they remain active.
+
+Examples:
+
+* Cannot have its duration increased.
+* Fishing Strength bonuses are halved.
+* Revealing encounters costs 1 Focus.
+* Gains +1 Required Strength each turn.
+* When caught, reveal another encounter.
+* Cannot be caught on the first turn.
+* Escaping removes a random card from your hand.
+* Playing Cycle cards grants this fish +1 Strength.
+
+Passives should be simple but create interesting situations.
+
+Not every fish should have one.
+
+---
+
+# Fish Queue
+
+Only one fish is Active.
+
+Additional revealed fish remain queued.
+
+When the current fish leaves or is caught:
+
+The next queued fish automatically becomes Active.
+
+Queued fish remain visible in the Encounter Reveal Area until promoted.
+
+---
+
+# Card Categories
+
+The game currently contains three primary categories.
+
+---
+
+## Fishing
+
+Manipulates the lake.
+
+Examples:
+
+Reveal encounter cards
+
+Increase Fishing Strength
+
+Catch bonuses
+
+Fish duration
+
+Fish queue
+
+Fish manipulation
+
+Primary color:
+Green
+
+---
+
+## Cycle
+
+Manipulates the player's deck.
+
+Examples:
+
+Draw
+
+Discard
+
+Shuffle
+
+Copy
+
+Search
+
+Create
+
+Return cards
+
+Primary color:
+Blue
+
+---
+
+## Support
+
+General utility.
+
+Examples:
+
+Gain Focus
+
+Increase Max Focus
+
+Reduce costs
+
+Card modifiers
+
+Permanent buffs
+
+Delayed utility
+
+Primary color:
+Gold
+
+---
+
+# Card Structure
+
+Each card displays:
+
+Name
+
+Cost
+
+Optional Delay
+
+Description
+
+Category Icon
+
+Animated Background Pattern
+
+Category Color
+
+No card artwork is planned.
+
+Cards rely on icons, colors, and layout for readability.
+
+---
+
+# Delayed Cards
+
+Cards may activate immediately or after one or more turns.
+
+Cards with multiple delayed activations only display the FIRST delay.
+
+Example:
+
+Delay Icon:
+
+⏳1
+
+Description:
+
+Reveal 1 card, then 2 cards, then 3 cards from the encounter deck separately, each on consecutive turns.
+
+The detailed schedule is shown after the card is played inside the Effects Panel.
+
+---
+
+# Card Modifiers
+
+Implemented as ScriptableObjects.
+
+Examples:
+
+Fishing Strength modifiers
+
+Next Card Cost
+
+Draw modifiers
+
+Reward modifiers
+
+Future modifier types should be easy to add.
+
+Modifiers support:
+
+Remaining Uses
+
+Duration
+
+Permanent
+
+Next Card
+
+Next Turn
+
+Several Turns
+
+---
+
+# Effect Panel
+
+Purpose:
+
+Visualize every active gameplay modifier.
+
+Contains two sections.
+
+---
+
+Current
+
+Examples:
+
++2 Fishing Strength
+
+Next Cost = 0
+
++1 Max Focus
+
+Double Catch Rewards
+
+---
+
+Upcoming
+
+Examples:
+
+⏳1 Reveal 1
+
+⏳2 Reveal 2
+
+⏳3 Reveal 3
+
+⏳2 Draw 2
+
+⏳4 Shuffle Discard
+
+Delayed effects disappear as they resolve.
+
+---
+
+# Encounter System
+
+Encounter deck currently contains:
+
+Fish
+
+Water
+
+Future encounter types may be added later.
+
+Encounter cards reveal sequentially.
+
+Fish remain in the Encounter Reveal Area until promoted.
+
+Promotion animation:
+
+Encounter Reveal
+
+↓
+
+Play Zone
+
+↓
+
+Destroyed
+
+↓
+
+Active Fish Visual Appears
+
+Gameplay state should always drive visuals rather than visuals driving gameplay.
+
+---
+
+# UI Layout
+
+Left
+
+Encounter Reveal Area
+
+Below:
+
+Encounter Deck
+
+Player Deck
+
+Discard Pile
+
+Each can open a detailed view.
+
+---
+
+Center
+
+Play Zone
+
+Active Fish
+
+Fish Duration Icons
+
+Fishing Strength
+
+Focus
+
+Player Hand
+
+---
+
+Right
+
+Effects Panel
+
+Catch Button
+
+End Turn Button
+
+---
+
+# Rod System
+
+Rods are intended to become one of the game's defining mechanics.
+
+Players may eventually own multiple rods.
+
+Only one rod is equipped during an encounter.
+
+Rods function similarly to passive loadouts.
+
+Examples:
+
+Increase starting Focus.
+
+Fish remain longer.
+
+Increase Fishing Strength.
+
+Reveal additional encounters.
+
+Modify delayed effects.
+
+Rod design should encourage different playstyles rather than simply providing stat increases.
+
+---
+
+# Planned Meta Progression
+
+Still under exploration.
+
+Current possibilities include:
+
+Node Map
+
+Explorable Region
+
+Expedition System
+
+Town Hub
+
+Current favorite direction:
+
+An interconnected world map rather than a strictly linear node system.
+
+Fishing spots may enter cooldown after completion.
+
+This system is NOT finalized.
+
+The immediate focus remains completing encounter gameplay.
+
+---
+
+# Current Implemented Systems
+
+Player Deck
+
+Discard
+
+Hand
+
+Card Drawing
+
+Card Playing
+
+Focus
+
+Fishing Strength
+
+Encounter Deck
+
+Encounter Reveal Animation
+
+Fish Queue
+
+Active Fish
+
+Delayed Effects
+
+Card Modifiers
+
+Card Categories
+
+Animated Card Shader
+
+Card Delay System
+
+Discard Animation
+
+Reveal Animation
+
+Duration Icons
+
+---
+
+# Demo Scope
+
+Goal:
+
+One polished gameplay loop.
+
+Approximately:
+
+35 Player Cards
+
+15–20 Fish
+
+1 Rod
+
+Complete encounter gameplay.
+
+Placeholder art acceptable.
+
+No unfinished mechanics.
+
+---
+
+# Planned Full Release
+
+Estimated:
+
+80–120 Cards
+
+40–60 Fish
+
+Multiple Rods
+
+Fish Passives
+
+Additional Encounter Types
+
+Additional Modifier Types
+
+Progression System
+
+Expanded UI
+
+Audio
+
+Polish
+
+---
+
+# Current Priorities
+
+1. Effects Panel
+
+2. Fishing Strength cards
+
+3. Fish lifecycle
+
+4. Catch rewards
+
+5. Fish passives
+
+6. Additional cards
+
+7. UI polish
+
+8. More fish
+
+9. Balance
+
+10. Demo
+
+---
+
+# Code Philosophy
+
+Separate gameplay from visuals.
+
+Animation should never determine gameplay.
+
+Managers should remain specialized.
+
+Favor ScriptableObjects for reusable gameplay logic.
+
+Keep systems modular and easy to extend.
+
+Avoid giant manager classes.
+
+---
+
+# Long-Term Vision
+
+Fish the Fisher should feel like a highly replayable strategy game where every fishing encounter becomes a puzzle.
+
+The game should encourage planning several turns ahead through delayed effects, card combinations, rod selection, fish passives, and deckbuilding decisions.
+
+Players should constantly ask themselves:
+
+"How can I manipulate the lake to catch this fish most efficiently?"
+
+rather than
+
+"How much damage can I deal this turn?"
+
+Fishing should be the core mechanic—not merely a theme placed over a traditional combat system.
+
+The ultimate goal is for Fish the Fisher to establish its own identity within the deckbuilder genre rather than simply being "Slay the Spire with fish."

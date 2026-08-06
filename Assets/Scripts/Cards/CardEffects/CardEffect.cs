@@ -5,5 +5,5 @@ public abstract class CardEffect : ScriptableObject
     public int turnDelay;
 
     public abstract void Execute(CardContext context);
-    public abstract string ToString();
+    public override abstract string ToString();
 }

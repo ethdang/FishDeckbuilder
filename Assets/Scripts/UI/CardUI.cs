@@ -16,6 +16,7 @@ public class CardUI : MonoBehaviour,
     [SerializeField] private Color patternColor;
     [SerializeField] private Image cardFrame;
     [SerializeField] private Image backgroundImage;
+    [SerializeField] private Image pinImage;
     [SerializeField] private TMP_Text cardNameText;
     [SerializeField] private TMP_Text descriptionText;
     [SerializeField] private TMP_Text costText;
@@ -35,6 +36,7 @@ public class CardUI : MonoBehaviour,
     public float HoverProgress { get; private set; }
     public bool IsHovered { get; private set; }
     public bool IsDragging { get; private set; }
+    public bool IsPinned { get; private set; }
 
     public Vector2 TargetPosition;
     public Quaternion TargetRotation;
